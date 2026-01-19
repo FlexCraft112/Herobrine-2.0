@@ -16,9 +16,11 @@ public class HerobrineNPCSpawner {
 
     public static void spawn(HerobrinePlugin plugin, Player target) {
 
+        // 📍 СПАВН ПЕРЕД ИГРОКОМ
         Location spawnLoc = target.getLocation().clone()
                 .add(target.getLocation().getDirection().normalize().multiply(2));
-        spawnLoc.setY(target.getLocation().getY());
+        spawnLoc.setPitch(0);
+        spawnLoc.setYaw(target.getLocation().getYaw() + 180);
 
         NPC npc = CitizensAPI.getNPCRegistry()
                 .createNPC(EntityType.PLAYER, "BalloonLion9289");
@@ -30,18 +32,17 @@ public class HerobrineNPCSpawner {
         npc.setName("");
         npc.data().setPersistent("nameplate-visible", false);
         npc.data().setPersistent("show-health", false);
-        npc.data().setPersistent("health", 20.0);
 
-        // 🧍 СКИН = STEVE
+        // 🧍 СКИН = STEVE (ТЕЛО)
         npc.data().setPersistent("player-skin-name", "Steve");
         npc.data().setPersistent("player-skin-use-latest", true);
 
-        // 👁️ ГОЛОВА ХЕРОБРИНА
         Player npcPlayer = (Player) npc.getEntity();
 
+        // 👁️ ГОЛОВА MHF_HEROBRINE
         ItemStack head = new ItemStack(Material.PLAYER_HEAD);
         SkullMeta meta = (SkullMeta) head.getItemMeta();
-        meta.setOwner("Herobrine");
+        meta.setOwner("MHF_Herobrine");
         head.setItemMeta(meta);
 
         npcPlayer.getEquipment().setHelmet(head);
@@ -54,20 +55,8 @@ public class HerobrineNPCSpawner {
         target.playSound(target.getLocation(), Sound.ENTITY_ENDERMAN_STARE, 1f, 0.4f);
         target.playSound(target.getLocation(), Sound.AMBIENT_CAVE, 1f, 0.5f);
 
-        // 👀 СМОТРИТ В ГЛАЗА (БЕЗ ВЗГЛЯДА ВВЕРХ)
-        new BukkitRunnable() {
-            @Override
-            public void run() {
-                if (!npc.isSpawned()) {
-                    cancel();
-                    return;
-                }
-
-                Location eye = target.getEyeLocation().clone();
-                eye.setPitch(0);
-                npc.faceLocation(eye);
-            }
-        }.runTaskTimer(plugin, 0L, 1L);
+        // 🚫 НЕ СЛЕДИТ ВЗГЛЯДОМ — СМОТРИТ ПРЯМО
+        npcPlayer.setRotation(spawnLoc.getYaw(), 0);
 
         // 💨 ЭПИЧЕСКОЕ ИСЧЕЗНОВЕНИЕ
         new BukkitRunnable() {
@@ -78,8 +67,8 @@ public class HerobrineNPCSpawner {
                 loc.getWorld().spawnParticle(
                         Particle.SMOKE_LARGE,
                         loc.add(0, 1, 0),
-                        80,
-                        0.4, 1.0, 0.4,
+                        100,
+                        0.5, 1.2, 0.5,
                         0.02
                 );
 

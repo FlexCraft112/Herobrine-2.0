@@ -3,8 +3,6 @@ package me.flexcraft.herobrine.npc;
 import me.flexcraft.herobrine.HerobrinePlugin;
 import net.citizensnpcs.api.CitizensAPI;
 import net.citizensnpcs.api.npc.NPC;
-import net.citizensnpcs.api.trait.trait.Equipment;
-import net.citizensnpcs.api.trait.trait.SkinTrait;
 import org.bukkit.*;
 import org.bukkit.entity.EntityType;
 import org.bukkit.entity.Player;
@@ -14,51 +12,43 @@ import org.bukkit.potion.PotionEffect;
 import org.bukkit.potion.PotionEffectType;
 import org.bukkit.scheduler.BukkitRunnable;
 
-import java.util.UUID;
-
 public class HerobrineNPCSpawner {
 
     public static void spawn(HerobrinePlugin plugin, Player target) {
 
-        Location spawnLoc = target.getLocation()
-                .add(target.getLocation().getDirection().normalize().multiply(2));
-        spawnLoc.setY(target.getLocation().getY());
+        Location base = target.getLocation().clone().add(
+                target.getLocation().getDirection().normalize().multiply(2)
+        );
+        base.setY(target.getLocation().getY());
 
         NPC npc = CitizensAPI.getNPCRegistry().createNPC(EntityType.PLAYER, "Herobrine");
-        npc.spawn(spawnLoc);
-        npc.setProtected(true);
+        npc.spawn(base);
 
-        /* ===== SKIN: STEVE BODY ===== */
-        SkinTrait skinTrait = npc.getOrAddTrait(SkinTrait.class);
-        skinTrait.setSkinName("Steve");
+        npc.setProtected(true); // бессмертен
+        npc.data().setPersistent("player-skin-name", "Steve");
+        npc.data().setPersistent("player-skin-use-latest", true);
 
-        /* ===== HEAD: HEROBRINE ===== */
-        Equipment equipment = npc.getOrAddTrait(Equipment.class);
-
+        // Надеваем голову Херобрина
         ItemStack head = new ItemStack(Material.PLAYER_HEAD);
         SkullMeta meta = (SkullMeta) head.getItemMeta();
-
-        // Original Herobrine UUID (white eyes)
-        meta.setOwningPlayer(Bukkit.getOfflinePlayer(
-                UUID.fromString("8667ba71-b85a-4004-af54-457a9734eed7")
-        ));
-
+        meta.setOwner("Herobrine");
         head.setItemMeta(meta);
-        equipment.set(Equipment.EquipmentSlot.HELMET, head);
 
-        /* ===== HORROR EFFECTS ===== */
+        npc.getEntity().getEquipment().setHelmet(head);
+
+        // Пугающие эффекты
         target.addPotionEffect(new PotionEffect(PotionEffectType.BLINDNESS, 60, 1));
+        target.addPotionEffect(new PotionEffect(PotionEffectType.DARKNESS, 80, 1));
         target.addPotionEffect(new PotionEffect(PotionEffectType.SLOW, 60, 3));
-        target.addPotionEffect(new PotionEffect(PotionEffectType.CONFUSION, 80, 1));
 
         target.playSound(target.getLocation(), Sound.ENTITY_ENDERMAN_STARE, 1f, 0.4f);
         target.playSound(target.getLocation(), Sound.AMBIENT_CAVE, 1f, 0.5f);
 
-        /* ===== ALWAYS LOOK AT PLAYER ===== */
+        // Всегда смотрит В ЛИЦО
         new BukkitRunnable() {
             @Override
             public void run() {
-                if (!npc.isSpawned() || !target.isOnline()) {
+                if (!npc.isSpawned()) {
                     cancel();
                     return;
                 }
@@ -66,27 +56,20 @@ public class HerobrineNPCSpawner {
             }
         }.runTaskTimer(plugin, 0L, 1L);
 
-        /* ===== DISAPPEAR WITH DARK SMOKE ===== */
+        // Исчезновение с дымом
         new BukkitRunnable() {
             @Override
             public void run() {
-                if (!npc.isSpawned()) return;
+                Location loc = npc.getEntity().getLocation();
 
-                Location l = npc.getEntity().getLocation();
+                loc.getWorld().spawnParticle(Particle.SMOKE_LARGE, loc.add(0, 1, 0),
+                        40, 0.3, 0.6, 0.3, 0.02);
 
-                l.getWorld().spawnParticle(
-                        Particle.SMOKE_LARGE,
-                        l.clone().add(0, 1, 0),
-                        250,
-                        0.7, 1.2, 0.7,
-                        0.02
-                );
-
-                l.getWorld().playSound(l, Sound.ENTITY_WITHER_SPAWN, 0.6f, 0.3f);
+                loc.getWorld().playSound(loc, Sound.ENTITY_WITHER_SPAWN, 1f, 0.3f);
 
                 npc.despawn();
                 npc.destroy();
             }
-        }.runTaskLater(plugin, 60L);
+        }.runTaskLater(plugin, 80L); // 4 секунды
     }
 }

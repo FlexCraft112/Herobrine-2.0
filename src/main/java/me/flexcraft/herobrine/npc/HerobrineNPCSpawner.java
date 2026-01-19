@@ -9,6 +9,8 @@ import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.SkullMeta;
 import org.bukkit.plugin.java.JavaPlugin;
+import org.bukkit.potion.PotionEffect;
+import org.bukkit.potion.PotionEffectType;
 import org.bukkit.util.Vector;
 
 public class HerobrineNPCSpawner {
@@ -35,12 +37,13 @@ public class HerobrineNPCSpawner {
         npc = CitizensAPI.getNPCRegistry().createNPC(EntityType.PLAYER, "");
         npc.spawn(loc);
 
-        // ❌ скрываем ник + HP + TAB
+        // ❌ скрываем ник + HP + TAB (максимально жёстко)
         npc.setName("");
         npc.data().setPersistent("nameplate-visible", false);
         npc.data().setPersistent("tablist", false);
+        npc.data().setPersistent("show-health", false);
 
-        // 👁️ LOOK (как /npc look)
+        // 👁️ LOOK (аналог /npc look)
         npc.addTrait(LookClose.class);
         LookClose look = npc.getTrait(LookClose.class);
         look.lookClose(true);
@@ -50,9 +53,27 @@ public class HerobrineNPCSpawner {
         // 🎭 Голова MHF_Herobrine
         equipHerobrineHead();
 
-        // 🌫️ дым + звук
+        // 🌫️ дым + звук при появлении
         loc.getWorld().spawnParticle(Particle.SMOKE_LARGE, loc, 30, 0.3, 0.5, 0.3, 0.01);
         loc.getWorld().playSound(loc, Sound.ENTITY_WITHER_SPAWN, 0.6f, 0.5f);
+        loc.getWorld().playSound(loc, Sound.ENTITY_ENDERMAN_STARE, 0.6f, 0.4f);
+
+        // 😵 ЭФФЕКТЫ ИГРОКУ (ТЕПЕРЬ ТОЧНО ЕСТЬ)
+        target.addPotionEffect(new PotionEffect(
+                PotionEffectType.BLINDNESS,
+                60, // 3 секунды
+                1,
+                false,
+                false
+        ));
+
+        target.addPotionEffect(new PotionEffect(
+                PotionEffectType.SLOW,
+                80, // 4 секунды
+                2,
+                false,
+                false
+        ));
 
         // 😨 пугающие сообщения
         sendScaryMessages(plugin, target);

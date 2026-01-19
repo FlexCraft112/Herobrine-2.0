@@ -5,6 +5,7 @@ import net.citizensnpcs.api.CitizensAPI;
 import net.citizensnpcs.api.npc.NPC;
 import org.bukkit.*;
 import org.bukkit.entity.EntityType;
+import org.bukkit.entity.LivingEntity;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.SkullMeta;
@@ -16,27 +17,32 @@ public class HerobrineNPCSpawner {
 
     public static void spawn(HerobrinePlugin plugin, Player target) {
 
-        Location base = target.getLocation().clone().add(
-                target.getLocation().getDirection().normalize().multiply(2)
-        );
-        base.setY(target.getLocation().getY());
+        Location spawnLoc = target.getLocation().clone()
+                .add(target.getLocation().getDirection().normalize().multiply(2));
+        spawnLoc.setY(target.getLocation().getY());
 
-        NPC npc = CitizensAPI.getNPCRegistry().createNPC(EntityType.PLAYER, "Herobrine");
-        npc.spawn(base);
+        NPC npc = CitizensAPI.getNPCRegistry()
+                .createNPC(EntityType.PLAYER, "Herobrine");
 
-        npc.setProtected(true); // бессмертен
+        npc.spawn(spawnLoc);
+        npc.setProtected(true);
+
+        // ТЕЛО = СТИВ
         npc.data().setPersistent("player-skin-name", "Steve");
         npc.data().setPersistent("player-skin-use-latest", true);
 
-        // Надеваем голову Херобрина
-        ItemStack head = new ItemStack(Material.PLAYER_HEAD);
-        SkullMeta meta = (SkullMeta) head.getItemMeta();
-        meta.setOwner("Herobrine");
-        head.setItemMeta(meta);
+        // ===== ГОЛОВА ХЕРОБРИНА =====
+        if (npc.getEntity() instanceof LivingEntity le) {
 
-        npc.getEntity().getEquipment().setHelmet(head);
+            ItemStack head = new ItemStack(Material.PLAYER_HEAD);
+            SkullMeta meta = (SkullMeta) head.getItemMeta();
+            meta.setOwner("Herobrine");
+            head.setItemMeta(meta);
 
-        // Пугающие эффекты
+            le.getEquipment().setHelmet(head);
+        }
+
+        // ===== ЭФФЕКТЫ УЖАСА =====
         target.addPotionEffect(new PotionEffect(PotionEffectType.BLINDNESS, 60, 1));
         target.addPotionEffect(new PotionEffect(PotionEffectType.DARKNESS, 80, 1));
         target.addPotionEffect(new PotionEffect(PotionEffectType.SLOW, 60, 3));
@@ -44,7 +50,7 @@ public class HerobrineNPCSpawner {
         target.playSound(target.getLocation(), Sound.ENTITY_ENDERMAN_STARE, 1f, 0.4f);
         target.playSound(target.getLocation(), Sound.AMBIENT_CAVE, 1f, 0.5f);
 
-        // Всегда смотрит В ЛИЦО
+        // ===== СМОТРИТ ПРЯМО В ГЛАЗА =====
         new BukkitRunnable() {
             @Override
             public void run() {
@@ -56,14 +62,19 @@ public class HerobrineNPCSpawner {
             }
         }.runTaskTimer(plugin, 0L, 1L);
 
-        // Исчезновение с дымом
+        // ===== ИСЧЕЗНОВЕНИЕ С ЧЁРНЫМ ДЫМОМ =====
         new BukkitRunnable() {
             @Override
             public void run() {
                 Location loc = npc.getEntity().getLocation();
 
-                loc.getWorld().spawnParticle(Particle.SMOKE_LARGE, loc.add(0, 1, 0),
-                        40, 0.3, 0.6, 0.3, 0.02);
+                loc.getWorld().spawnParticle(
+                        Particle.SMOKE_LARGE,
+                        loc.add(0, 1, 0),
+                        50,
+                        0.4, 0.8, 0.4,
+                        0.02
+                );
 
                 loc.getWorld().playSound(loc, Sound.ENTITY_WITHER_SPAWN, 1f, 0.3f);
 

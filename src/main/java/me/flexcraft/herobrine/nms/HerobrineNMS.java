@@ -15,6 +15,8 @@ import org.bukkit.craftbukkit.v1_20_R1.CraftServer;
 import org.bukkit.craftbukkit.v1_20_R1.CraftWorld;
 import org.bukkit.craftbukkit.v1_20_R1.entity.CraftPlayer;
 import org.bukkit.entity.Player;
+import org.bukkit.potion.PotionEffect;
+import org.bukkit.potion.PotionEffectType;
 import org.bukkit.scheduler.BukkitTask;
 
 import java.util.UUID;
@@ -23,17 +25,20 @@ public class HerobrineNMS {
 
     public static void spawn(Player target, HerobrinePlugin plugin) {
 
+        // === NMS доступ ===
         CraftServer craftServer = (CraftServer) Bukkit.getServer();
         MinecraftServer mcServer = craftServer.getServer();
         ServerLevel level = ((CraftWorld) target.getWorld()).getHandle();
 
+        // === Fake Player ===
         GameProfile profile = new GameProfile(UUID.randomUUID(), "Herobrine");
         ServerPlayer herobrine = new ServerPlayer(mcServer, level, profile);
         herobrine.setGameMode(GameType.SURVIVAL);
 
-        // Без ИИ и движения
+        // Запрещаем движение (стоит на месте)
         herobrine.getAttribute(Attributes.MOVEMENT_SPEED).setBaseValue(0.0);
 
+        // === Позиция перед игроком ===
         Location loc = target.getLocation();
         Location front = loc.clone().add(
                 loc.getDirection().normalize()
@@ -44,7 +49,7 @@ public class HerobrineNMS {
 
         CraftPlayer craftTarget = (CraftPlayer) target;
 
-        // Показать
+        // === Показать Херобрина ТОЛЬКО цели ===
         craftTarget.getHandle().connection.send(
                 new ClientboundPlayerInfoUpdatePacket(
                         ClientboundPlayerInfoUpdatePacket.Action.ADD_PLAYER,
@@ -55,7 +60,7 @@ public class HerobrineNMS {
                 new ClientboundAddPlayerPacket(herobrine)
         );
 
-        // 🔊 Звук
+        // === Звук ===
         if (plugin.getConfig().getBoolean("herobrine.play-sound")) {
             target.playSound(
                     target.getLocation(),
@@ -65,24 +70,22 @@ public class HerobrineNMS {
             );
         }
 
-        // 🌑 Тьма
+        // === Тьма ===
         if (plugin.getConfig().getBoolean("herobrine.effects.darkness")) {
-            target.addPotionEffect(
-                    new org.bukkit.potion.PotionEffect(
-                            org.bukkit.potion.PotionEffectType.DARKNESS,
-                            plugin.getConfig().getInt("herobrine.effects.darkness-duration"),
-                            0
-                    )
-            );
+            target.addPotionEffect(new PotionEffect(
+                    PotionEffectType.DARKNESS,
+                    plugin.getConfig().getInt("herobrine.effects.darkness-duration"),
+                    0
+            ));
         }
 
-        // 👁️ Слежение взглядом (каждый тик)
+        // === Слежение взглядом (каждый тик) ===
         BukkitTask lookTask = Bukkit.getScheduler().runTaskTimer(plugin, () -> {
             Location t = target.getLocation();
 
             double dx = t.getX() - herobrine.getX();
             double dz = t.getZ() - herobrine.getZ();
-            double dy = t.getY() + 1.6 - herobrine.getY();
+            double dy = (t.getY() + 1.6) - herobrine.getY();
 
             float yaw = (float) (Math.toDegrees(Math.atan2(dz, dx)) - 90);
             float pitch = (float) -Math.toDegrees(Math.atan2(dy, Math.sqrt(dx * dx + dz * dz)));
@@ -92,17 +95,36 @@ public class HerobrineNMS {
             herobrine.yHeadRot = yaw;
         }, 0L, 1L);
 
-        // ⏳ Исчезновение
-        int duration = plugin.getConfig().getInt("herobrine.duration-seconds") * 20;
+        // === Таймер исчезновения ===
+        int durationTicks = plugin.getConfig().getInt("herobrine.duration-seconds") * 20;
 
+        // В последний тик — резкий поворот головы
         Bukkit.getScheduler().runTaskLater(plugin, () -> {
-            lookTask.cancel();
-            craftTarget.getHandle().connection.send(
-                    new ClientboundPlayerInfoUpdatePacket(
-                            ClientboundPlayerInfoUpdatePacket.Action.REMOVE_PLAYER,
-                            herobrine
-                    )
-            );
-        }, duration);
+
+            Location t = target.getLocation();
+
+            double dx = t.getX() - herobrine.getX();
+            double dz = t.getZ() - herobrine.getZ();
+            double dy = (t.getY() + 1.6) - herobrine.getY();
+
+            float yaw = (float) (Math.toDegrees(Math.atan2(dz, dx)) - 90);
+            float pitch = (float) -Math.toDegrees(Math.atan2(dy, Math.sqrt(dx * dx + dz * dz)));
+
+            herobrine.setYRot(yaw);
+            herobrine.setXRot(pitch);
+            herobrine.yHeadRot = yaw;
+
+            // Через 1 тик — исчезновение
+            Bukkit.getScheduler().runTaskLater(plugin, () -> {
+                lookTask.cancel();
+                craftTarget.getHandle().connection.send(
+                        new ClientboundPlayerInfoUpdatePacket(
+                                ClientboundPlayerInfoUpdatePacket.Action.REMOVE_PLAYER,
+                                herobrine
+                        )
+                );
+            }, 1L);
+
+        }, durationTicks - 1L);
     }
 }

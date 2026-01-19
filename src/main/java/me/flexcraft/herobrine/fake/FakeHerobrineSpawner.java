@@ -7,12 +7,17 @@ import org.bukkit.util.Vector;
 public class FakeHerobrineSpawner {
 
     /**
-     * Возвращает точку СПЕРЕД игроком (а не за спиной)
+     * Возвращает точку строго перед игроком
+     * @param player игрок
+     * @param distance дистанция в блоках
      */
     public static Location getLocationInFront(Player player, double distance) {
         Location eye = player.getEyeLocation();
         Vector direction = eye.getDirection().normalize();
 
-        return eye.add(direction.multiply(distance));
+        Location spawn = eye.clone().add(direction.multiply(distance));
+        spawn.setPitch(0);
+
+        return spawn;
     }
 }

@@ -1,124 +1,85 @@
 package me.flexcraft.herobrine.fake;
 
-import me.flexcraft.herobrine.HerobrinePlugin;
-import org.bukkit.*;
+import com.comphenix.protocol.ProtocolLibrary;
+import com.comphenix.protocol.ProtocolManager;
+import com.comphenix.protocol.events.PacketContainer;
+import com.comphenix.protocol.wrappers.*;
+import org.bukkit.Bukkit;
+import org.bukkit.Location;
+import org.bukkit.Sound;
 import org.bukkit.entity.Player;
-import org.bukkit.entity.Villager;
-import org.bukkit.inventory.EntityEquipment;
-import org.bukkit.inventory.ItemStack;
-import org.bukkit.inventory.meta.SkullMeta;
+import org.bukkit.plugin.java.JavaPlugin;
 import org.bukkit.potion.PotionEffect;
 import org.bukkit.potion.PotionEffectType;
-import org.bukkit.scheduler.BukkitRunnable;
-import org.bukkit.util.Vector;
+
+import java.lang.reflect.InvocationTargetException;
+import java.util.Collections;
+import java.util.UUID;
 
 public class FakeHerobrineSpawner {
 
-    public static void spawn(HerobrinePlugin plugin, Player target) {
+    private static final ProtocolManager protocol = ProtocolLibrary.getProtocolManager();
 
-        World world = target.getWorld();
+    public static void spawn(JavaPlugin plugin, Player target) {
+        try {
+            // 🔹 UUID и профиль (скин Херобрина)
+            UUID uuid = UUID.randomUUID();
+            WrappedGameProfile profile = new WrappedGameProfile(uuid, "Herobrine");
 
-        // 👉 СПАВН ПРЯМО ПЕРЕД ЛИЦОМ
-        Location spawnLoc = target.getEyeLocation()
-                .add(target.getLocation().getDirection().normalize().multiply(1.4));
-        spawnLoc.setYaw(target.getLocation().getYaw() + 180);
-        spawnLoc.setPitch(0);
+            // ⚠ СКИН ХЕРОБРИНА (белые глаза)
+            profile.getProperties().put("textures", new WrappedSignedProperty(
+                    "textures",
+                    "ewogICJ0aW1lc3RhbXAiIDogMTYxNjE2NDc2NjE2NiwKICAicHJvZmlsZUlkIiA6ICIyMTY4ODI1YzZmNDA0OTljOWE4Y2U5NzU3NzE3MzJkNCIsCiAgInByb2ZpbGVOYW1lIiA6ICJIZXJvYnJpbmUiLAogICJzaWduYXR1cmVSZXF1aXJlZCIgOiB0cnVlLAogICJ0ZXh0dXJlcyIgOiB7CiAgICAiU0tJTiIgOiB7CiAgICAgICJ1cmwiIDogImh0dHA6Ly90ZXh0dXJlcy5taW5lY3JhZnQubmV0L3RleHR1cmUvN2Q5YzZjM2Y3OTRmZmRjY2Y1MWM5NzJmYzY5ZGI3ODhjMjVjOTljYzMzNzg4ZTEzZDI3Y2FjZjY2NSIKICAgIH0KICB9Cn0=",
+                    "signature"
+            ));
 
-        Villager herobrine = world.spawn(spawnLoc, Villager.class);
-        herobrine.setCustomName("§fHerobrine");
-        herobrine.setCustomNameVisible(true);
-        herobrine.setAI(false);
-        herobrine.setSilent(true);
-        herobrine.setInvulnerable(true);
+            // 📍 Позиция ПЕРЕД игроком
+            Location loc = target.getLocation().clone();
+            loc.add(loc.getDirection().normalize().multiply(2));
+            loc.setYaw(target.getLocation().getYaw() + 180);
+            loc.setPitch(0);
 
-        // 👁️ БЕЛЫЕ ГЛАЗА
-        ItemStack head = new ItemStack(Material.PLAYER_HEAD);
-        SkullMeta meta = (SkullMeta) head.getItemMeta();
-        if (meta != null) {
-            meta.setOwner("MHF_Herobrine");
-            head.setItemMeta(meta);
+            int entityId = (int) (Math.random() * Integer.MAX_VALUE);
+
+            // 🔹 PLAYER_INFO (ADD)
+            PacketContainer infoAdd = protocol.createPacket(PacketType.Play.Server.PLAYER_INFO);
+            infoAdd.getPlayerInfoAction().write(0, EnumWrappers.PlayerInfoAction.ADD_PLAYER);
+            infoAdd.getPlayerInfoDataLists().write(0, Collections.singletonList(
+                    new PlayerInfoData(profile, 0, EnumWrappers.NativeGameMode.SURVIVAL, WrappedChatComponent.fromText("Herobrine"))
+            ));
+
+            // 🔹 SPAWN ENTITY
+            PacketContainer spawn = protocol.createPacket(PacketType.Play.Server.NAMED_ENTITY_SPAWN);
+            spawn.getIntegers().write(0, entityId);
+            spawn.getUUIDs().write(0, uuid);
+            spawn.getDoubles()
+                    .write(0, loc.getX())
+                    .write(1, loc.getY())
+                    .write(2, loc.getZ());
+            spawn.getBytes()
+                    .write(0, (byte) (loc.getYaw() * 256 / 360))
+                    .write(1, (byte) (loc.getPitch() * 256 / 360));
+
+            // 🔹 Отправляем пакеты
+            protocol.sendServerPacket(target, infoAdd);
+            protocol.sendServerPacket(target, spawn);
+
+            // 😨 ЭФФЕКТЫ
+            target.addPotionEffect(new PotionEffect(PotionEffectType.BLINDNESS, 40, 1));
+            target.addPotionEffect(new PotionEffect(PotionEffectType.SLOW, 40, 10));
+            target.playSound(target.getLocation(), Sound.ENTITY_WITHER_SPAWN, 1f, 0.5f);
+
+            // ⏳ УДАЛЕНИЕ ЧЕРЕЗ 2 СЕК
+            Bukkit.getScheduler().runTaskLater(plugin, () -> {
+                try {
+                    PacketContainer destroy = protocol.createPacket(PacketType.Play.Server.ENTITY_DESTROY);
+                    destroy.getIntLists().write(0, Collections.singletonList(entityId));
+                    protocol.sendServerPacket(target, destroy);
+                } catch (Exception ignored) {}
+            }, 40L);
+
+        } catch (InvocationTargetException e) {
+            e.printStackTrace();
         }
-
-        EntityEquipment eq = herobrine.getEquipment();
-        if (eq != null) {
-            eq.setHelmet(head);
-        }
-
-        // 😱 ЭФФЕКТЫ СТРАХА
-        target.addPotionEffect(new PotionEffect(PotionEffectType.BLINDNESS, 40, 1));
-        target.addPotionEffect(new PotionEffect(PotionEffectType.SLOW, 60, 3));
-        target.addPotionEffect(new PotionEffect(PotionEffectType.DARKNESS, 60, 1));
-
-        // 🔊 ЗВУКИ
-        world.playSound(target.getLocation(), Sound.AMBIENT_CAVE, 1.5f, 0.4f);
-        world.playSound(target.getLocation(), Sound.ENTITY_ENDERMAN_STARE, 1.0f, 0.5f);
-
-        // ⚡ ВСПЫШКА (глаза)
-        target.spawnParticle(Particle.FLASH, target.getEyeLocation(), 1);
-
-        new BukkitRunnable() {
-
-            int ticks = 0;
-
-            @Override
-            public void run() {
-
-                if (!herobrine.isValid()) {
-                    cancel();
-                    return;
-                }
-
-                // ⏱ ПЕРВЫЕ 30 ТИКОВ (1.5 сек) — НЕ ИСЧЕЗАЕТ НИ ПРИ КАКИХ УСЛОВИЯХ
-                if (ticks < 30) {
-                    ticks++;
-                    return;
-                }
-
-                // 👁️ ПОСЛЕ — ПРОВЕРКА ВЗГЛЯДА
-                Vector look = target.getLocation().getDirection().normalize();
-                Vector toHerobrine = herobrine.getLocation()
-                        .toVector()
-                        .subtract(target.getLocation().toVector())
-                        .normalize();
-
-                if (look.dot(toHerobrine) < 0.5) {
-                    disappear();
-                    return;
-                }
-
-                // 🧟‍♂️ МЕДЛЕННО ПОДХОДИТ
-                Vector move = target.getLocation()
-                        .toVector()
-                        .subtract(herobrine.getLocation().toVector())
-                        .normalize()
-                        .multiply(0.06);
-
-                herobrine.teleport(herobrine.getLocation().add(move));
-
-                ticks++;
-
-                // ⏳ ЛИМИТ ЖИЗНИ
-                if (ticks > 80) {
-                    disappear();
-                }
-            }
-
-            void disappear() {
-                world.spawnParticle(
-                        Particle.SMOKE_LARGE,
-                        herobrine.getLocation().add(0, 1, 0),
-                        30
-                );
-                world.playSound(
-                        herobrine.getLocation(),
-                        Sound.ENTITY_WITHER_SPAWN,
-                        0.6f,
-                        0.3f
-                );
-                herobrine.remove();
-                cancel();
-            }
-
-        }.runTaskTimer(plugin, 0L, 2L);
     }
 }

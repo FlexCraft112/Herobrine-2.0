@@ -4,7 +4,7 @@ import me.flexcraft.herobrine.HerobrinePlugin;
 import net.citizensnpcs.api.CitizensAPI;
 import net.citizensnpcs.api.npc.NPC;
 import net.citizensnpcs.api.trait.trait.Equipment;
-import net.citizensnpcs.trait.SkinTrait;
+import net.citizensnpcs.api.trait.trait.SkinTrait;
 import org.bukkit.*;
 import org.bukkit.entity.EntityType;
 import org.bukkit.entity.Player;
@@ -20,31 +20,33 @@ public class HerobrineNPCSpawner {
 
     public static void spawn(HerobrinePlugin plugin, Player target) {
 
-        Location loc = target.getLocation()
+        Location spawnLoc = target.getLocation()
                 .add(target.getLocation().getDirection().normalize().multiply(2));
-        loc.setY(target.getLocation().getY());
+        spawnLoc.setY(target.getLocation().getY());
 
         NPC npc = CitizensAPI.getNPCRegistry().createNPC(EntityType.PLAYER, "Herobrine");
-        npc.spawn(loc);
+        npc.spawn(spawnLoc);
         npc.setProtected(true);
 
-        // Steve body
-        SkinTrait skin = npc.getOrAddTrait(SkinTrait.class);
-        skin.setSkinName("Steve");
+        /* ===== SKIN: STEVE BODY ===== */
+        SkinTrait skinTrait = npc.getOrAddTrait(SkinTrait.class);
+        skinTrait.setSkinName("Steve");
 
-        // Herobrine head (white eyes)
-        Equipment eq = npc.getOrAddTrait(Equipment.class);
+        /* ===== HEAD: HEROBRINE ===== */
+        Equipment equipment = npc.getOrAddTrait(Equipment.class);
+
         ItemStack head = new ItemStack(Material.PLAYER_HEAD);
         SkullMeta meta = (SkullMeta) head.getItemMeta();
 
+        // Original Herobrine UUID (white eyes)
         meta.setOwningPlayer(Bukkit.getOfflinePlayer(
                 UUID.fromString("8667ba71-b85a-4004-af54-457a9734eed7")
         ));
 
         head.setItemMeta(meta);
-        eq.set(Equipment.EquipmentSlot.HELMET, head);
+        equipment.set(Equipment.EquipmentSlot.HELMET, head);
 
-        // Horror effects
+        /* ===== HORROR EFFECTS ===== */
         target.addPotionEffect(new PotionEffect(PotionEffectType.BLINDNESS, 60, 1));
         target.addPotionEffect(new PotionEffect(PotionEffectType.SLOW, 60, 3));
         target.addPotionEffect(new PotionEffect(PotionEffectType.CONFUSION, 80, 1));
@@ -52,7 +54,7 @@ public class HerobrineNPCSpawner {
         target.playSound(target.getLocation(), Sound.ENTITY_ENDERMAN_STARE, 1f, 0.4f);
         target.playSound(target.getLocation(), Sound.AMBIENT_CAVE, 1f, 0.5f);
 
-        // Look into eyes
+        /* ===== ALWAYS LOOK AT PLAYER ===== */
         new BukkitRunnable() {
             @Override
             public void run() {
@@ -64,23 +66,26 @@ public class HerobrineNPCSpawner {
             }
         }.runTaskTimer(plugin, 0L, 1L);
 
-        // Smoke disappear
+        /* ===== DISAPPEAR WITH DARK SMOKE ===== */
         new BukkitRunnable() {
             @Override
             public void run() {
-                if (npc.isSpawned()) {
-                    Location l = npc.getEntity().getLocation();
-                    l.getWorld().spawnParticle(
-                            Particle.SMOKE_LARGE,
-                            l.add(0, 1, 0),
-                            200,
-                            0.6, 1.2, 0.6,
-                            0.02
-                    );
-                    l.getWorld().playSound(l, Sound.ENTITY_WITHER_SPAWN, 0.6f, 0.3f);
-                    npc.despawn();
-                    npc.destroy();
-                }
+                if (!npc.isSpawned()) return;
+
+                Location l = npc.getEntity().getLocation();
+
+                l.getWorld().spawnParticle(
+                        Particle.SMOKE_LARGE,
+                        l.clone().add(0, 1, 0),
+                        250,
+                        0.7, 1.2, 0.7,
+                        0.02
+                );
+
+                l.getWorld().playSound(l, Sound.ENTITY_WITHER_SPAWN, 0.6f, 0.3f);
+
+                npc.despawn();
+                npc.destroy();
             }
         }.runTaskLater(plugin, 60L);
     }

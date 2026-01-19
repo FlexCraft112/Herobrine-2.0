@@ -57,18 +57,18 @@ public class HerobrineNPCSpawner {
             // =========================
             Bukkit.getScheduler().runTaskLater(plugin,
                     () -> hitPlayer(target),
-                    60L // ⬅️ БЫЛО 100L
+                    60L // 3 секунды
             );
 
             // =========================
-            // 4️⃣ ИСЧЕЗНОВЕНИЕ НА 7-Й СЕКУНДЕ
+            // 4️⃣ ИСЧЕЗНОВЕНИЕ НА 5-Й СЕКУНДЕ
             // =========================
             Bukkit.getScheduler().runTaskLater(plugin,
                     HerobrineNPCSpawner::despawn,
-                    140L
+                    100L // 5 секунд
             );
 
-        }, 80L);
+        }, 80L); // 4 секунды после появления спереди
     }
 
     // =========================
@@ -120,10 +120,10 @@ public class HerobrineNPCSpawner {
         if (!p.isOnline() || !active) return;
 
         if (npc != null && npc.getEntity() instanceof LivingEntity entity) {
-            entity.swingMainHand(); // 👈 ВИДИМЫЙ ЗАМАХ
+            entity.swingMainHand(); // 👁️ визуальный замах
         }
 
-        p.damage(3.0); // 1.5 сердца
+        p.damage(3.0);
         p.playSound(p.getLocation(), Sound.ENTITY_PLAYER_HURT, 1f, 0.6f);
         p.playSound(p.getLocation(), Sound.ENTITY_ENDERMAN_TELEPORT, 1f, 0.5f);
 
@@ -139,6 +139,7 @@ public class HerobrineNPCSpawner {
 
             p.addPotionEffect(new PotionEffect(
                     PotionEffectType.BLINDNESS, 40, 1, false, false));
+
             p.addPotionEffect(new PotionEffect(
                     PotionEffectType.SLOW, 40, 2, false, false));
 
@@ -156,7 +157,7 @@ public class HerobrineNPCSpawner {
                 p.sendMessage("§7§oКто-то стоит слишком близко."), 60L);
 
         Bukkit.getScheduler().runTaskLater(plugin, () ->
-                p.sendMessage("§4§lНЕ ОБОРАЧИВАЙСЯ"), 100L);
+                p.sendMessage("§4§lПОЗДНО"), 100L);
     }
 
     // =========================

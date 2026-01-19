@@ -37,12 +37,14 @@ public class HerobrineNPCSpawner {
         npc.data().setPersistent("player-skin-use-latest", true);
 
         // 👁️ ГОЛОВА ХЕРОБРИНА
+        Player npcPlayer = (Player) npc.getEntity();
+
         ItemStack head = new ItemStack(Material.PLAYER_HEAD);
         SkullMeta meta = (SkullMeta) head.getItemMeta();
         meta.setOwner("Herobrine");
         head.setItemMeta(meta);
 
-        npc.getEntity().getEquipment().setHelmet(head);
+        npcPlayer.getEquipment().setHelmet(head);
 
         // 😱 ЭФФЕКТЫ УЖАСА
         target.addPotionEffect(new PotionEffect(PotionEffectType.BLINDNESS, 60, 1));
@@ -71,7 +73,7 @@ public class HerobrineNPCSpawner {
         new BukkitRunnable() {
             @Override
             public void run() {
-                Location loc = npc.getEntity().getLocation();
+                Location loc = npcPlayer.getLocation();
 
                 loc.getWorld().spawnParticle(
                         Particle.SMOKE_LARGE,

@@ -1,18 +1,16 @@
 package me.flexcraft.herobrine.command;
 
-import me.flexcraft.herobrine.HerobrinePlugin;
 import me.flexcraft.herobrine.npc.HerobrineNPCSpawner;
 import org.bukkit.Bukkit;
-import org.bukkit.command.Command;
-import org.bukkit.command.CommandExecutor;
-import org.bukkit.command.CommandSender;
+import org.bukkit.command.*;
 import org.bukkit.entity.Player;
+import org.bukkit.plugin.java.JavaPlugin;
 
 public class HerobrineCommand implements CommandExecutor {
 
-    private final HerobrinePlugin plugin;
+    private final JavaPlugin plugin;
 
-    public HerobrineCommand(HerobrinePlugin plugin) {
+    public HerobrineCommand(JavaPlugin plugin) {
         this.plugin = plugin;
     }
 
@@ -30,7 +28,7 @@ public class HerobrineCommand implements CommandExecutor {
         }
 
         if (HerobrineNPCSpawner.isActive()) {
-            sender.sendMessage("§cХеробрин уже рядом... Он ещё не исчез.");
+            sender.sendMessage("§cХеробрин уже рядом...");
             return true;
         }
 
@@ -40,9 +38,8 @@ public class HerobrineCommand implements CommandExecutor {
             return true;
         }
 
-        sender.sendMessage("§7Вы призвали §cХеробрина §7для §f" + target.getName());
+        sender.sendMessage("§7Ты призвал §4нечто§7...");
         HerobrineNPCSpawner.spawn(plugin, target);
-
         return true;
     }
 }

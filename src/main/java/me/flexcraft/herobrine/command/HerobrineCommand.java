@@ -33,7 +33,7 @@ public class HerobrineCommand implements CommandExecutor {
             return true;
         }
 
-        sender.sendMessage("§7Вы призвали §fHerobrine §7для §c" + target.getName());
+        sender.sendMessage("§7Вы призвали §cХеробрина §7для §f" + target.getName());
         target.sendMessage("§8Вы чувствуете §fчужой взгляд...");
 
         HerobrineNPCSpawner.spawn(plugin, target);

@@ -1,85 +1,74 @@
 package me.flexcraft.herobrine.fake;
 
-import com.comphenix.protocol.ProtocolLibrary;
-import com.comphenix.protocol.ProtocolManager;
-import com.comphenix.protocol.events.PacketContainer;
-import com.comphenix.protocol.wrappers.*;
-import org.bukkit.Bukkit;
-import org.bukkit.Location;
-import org.bukkit.Sound;
+import me.flexcraft.herobrine.HerobrinePlugin;
+import org.bukkit.*;
 import org.bukkit.entity.Player;
-import org.bukkit.plugin.java.JavaPlugin;
+import org.bukkit.entity.Villager;
 import org.bukkit.potion.PotionEffect;
 import org.bukkit.potion.PotionEffectType;
-
-import java.lang.reflect.InvocationTargetException;
-import java.util.Collections;
-import java.util.UUID;
+import org.bukkit.scheduler.BukkitRunnable;
 
 public class FakeHerobrineSpawner {
 
-    private static final ProtocolManager protocol = ProtocolLibrary.getProtocolManager();
+    public static void spawn(HerobrinePlugin plugin, Player target) {
 
-    public static void spawn(JavaPlugin plugin, Player target) {
-        try {
-            // 🔹 UUID и профиль (скин Херобрина)
-            UUID uuid = UUID.randomUUID();
-            WrappedGameProfile profile = new WrappedGameProfile(uuid, "Herobrine");
+        Location base = target.getLocation();
+        Location spawnLoc = base.clone().add(
+                base.getDirection().normalize().multiply(1.5)
+        );
 
-            // ⚠ СКИН ХЕРОБРИНА (белые глаза)
-            profile.getProperties().put("textures", new WrappedSignedProperty(
-                    "textures",
-                    "ewogICJ0aW1lc3RhbXAiIDogMTYxNjE2NDc2NjE2NiwKICAicHJvZmlsZUlkIiA6ICIyMTY4ODI1YzZmNDA0OTljOWE4Y2U5NzU3NzE3MzJkNCIsCiAgInByb2ZpbGVOYW1lIiA6ICJIZXJvYnJpbmUiLAogICJzaWduYXR1cmVSZXF1aXJlZCIgOiB0cnVlLAogICJ0ZXh0dXJlcyIgOiB7CiAgICAiU0tJTiIgOiB7CiAgICAgICJ1cmwiIDogImh0dHA6Ly90ZXh0dXJlcy5taW5lY3JhZnQubmV0L3RleHR1cmUvN2Q5YzZjM2Y3OTRmZmRjY2Y1MWM5NzJmYzY5ZGI3ODhjMjVjOTljYzMzNzg4ZTEzZDI3Y2FjZjY2NSIKICAgIH0KICB9Cn0=",
-                    "signature"
-            ));
+        spawnLoc.setY(base.getY());
 
-            // 📍 Позиция ПЕРЕД игроком
-            Location loc = target.getLocation().clone();
-            loc.add(loc.getDirection().normalize().multiply(2));
-            loc.setYaw(target.getLocation().getYaw() + 180);
-            loc.setPitch(0);
+        // 🔥 СПАВН ХЕРОБРИНА
+        Villager herobrine = target.getWorld().spawn(spawnLoc, Villager.class);
 
-            int entityId = (int) (Math.random() * Integer.MAX_VALUE);
+        herobrine.setCustomName("§fHerobrine");
+        herobrine.setCustomNameVisible(true);
+        herobrine.setAI(false);
+        herobrine.setSilent(true);
+        herobrine.setInvulnerable(true); // 💀 БЕССМЕРТНЫЙ
+        herobrine.setGravity(false);
+        herobrine.setCollidable(false);
 
-            // 🔹 PLAYER_INFO (ADD)
-            PacketContainer infoAdd = protocol.createPacket(PacketType.Play.Server.PLAYER_INFO);
-            infoAdd.getPlayerInfoAction().write(0, EnumWrappers.PlayerInfoAction.ADD_PLAYER);
-            infoAdd.getPlayerInfoDataLists().write(0, Collections.singletonList(
-                    new PlayerInfoData(profile, 0, EnumWrappers.NativeGameMode.SURVIVAL, WrappedChatComponent.fromText("Herobrine"))
-            ));
+        // ❌ УБИРАЕМ ПРОФЕССИЮ (чтобы не выглядел как житель)
+        herobrine.setProfession(Villager.Profession.NONE);
 
-            // 🔹 SPAWN ENTITY
-            PacketContainer spawn = protocol.createPacket(PacketType.Play.Server.NAMED_ENTITY_SPAWN);
-            spawn.getIntegers().write(0, entityId);
-            spawn.getUUIDs().write(0, uuid);
-            spawn.getDoubles()
-                    .write(0, loc.getX())
-                    .write(1, loc.getY())
-                    .write(2, loc.getZ());
-            spawn.getBytes()
-                    .write(0, (byte) (loc.getYaw() * 256 / 360))
-                    .write(1, (byte) (loc.getPitch() * 256 / 360));
+        // 👁️ БЕЛЫЕ ГЛАЗА (через эффект)
+        herobrine.addPotionEffect(new PotionEffect(
+                PotionEffectType.GLOWING,
+                40,
+                1,
+                false,
+                false
+        ));
 
-            // 🔹 Отправляем пакеты
-            protocol.sendServerPacket(target, infoAdd);
-            protocol.sendServerPacket(target, spawn);
+        // 😱 ЭФФЕКТЫ ХОРРОРА ИГРОКУ
+        target.addPotionEffect(new PotionEffect(PotionEffectType.BLINDNESS, 40, 1));
+        target.addPotionEffect(new PotionEffect(PotionEffectType.SLOW, 40, 10));
 
-            // 😨 ЭФФЕКТЫ
-            target.addPotionEffect(new PotionEffect(PotionEffectType.BLINDNESS, 40, 1));
-            target.addPotionEffect(new PotionEffect(PotionEffectType.SLOW, 40, 10));
-            target.playSound(target.getLocation(), Sound.ENTITY_WITHER_SPAWN, 1f, 0.5f);
+        target.playSound(target.getLocation(), Sound.AMBIENT_CAVE, 1f, 0.5f);
+        target.playSound(target.getLocation(), Sound.ENTITY_ENDERMAN_STARE, 1f, 0.6f);
 
-            // ⏳ УДАЛЕНИЕ ЧЕРЕЗ 2 СЕК
-            Bukkit.getScheduler().runTaskLater(plugin, () -> {
-                try {
-                    PacketContainer destroy = protocol.createPacket(PacketType.Play.Server.ENTITY_DESTROY);
-                    destroy.getIntLists().write(0, Collections.singletonList(entityId));
-                    protocol.sendServerPacket(target, destroy);
-                } catch (Exception ignored) {}
-            }, 40L);
+        // 👁️ ПОВОРАЧИВАЕМ ЛИЦОМ К ИГРОКУ
+        new BukkitRunnable() {
+            @Override
+            public void run() {
+                Location look = target.getLocation().clone();
+                look.setDirection(
+                        target.getLocation().toVector()
+                                .subtract(herobrine.getLocation().toVector())
+                );
+                herobrine.teleport(look);
+            }
+        }.runTaskTimer(plugin, 0L, 1L);
 
-        } catch (InvocationTargetException e) {
-            e.printStackTrace();
-        }
+        // 💨 ИСЧЕЗНОВЕНИЕ
+        new BukkitRunnable() {
+            @Override
+            public void run() {
+                herobrine.remove();
+                target.playSound(target.getLocation(), Sound.ENTITY_WITHER_SPAWN, 1f, 0.4f);
+            }
+        }.runTaskLater(plugin, 40L);
     }
 }

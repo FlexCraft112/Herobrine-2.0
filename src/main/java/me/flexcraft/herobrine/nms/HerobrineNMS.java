@@ -35,7 +35,7 @@ public class HerobrineNMS {
         ServerPlayer herobrine = new ServerPlayer(mcServer, level, profile);
         herobrine.setGameMode(GameType.SURVIVAL);
 
-        // Запрещаем движение (стоит на месте)
+        // Стоит на месте
         herobrine.getAttribute(Attributes.MOVEMENT_SPEED).setBaseValue(0.0);
 
         // === Позиция перед игроком ===
@@ -98,7 +98,7 @@ public class HerobrineNMS {
         // === Таймер исчезновения ===
         int durationTicks = plugin.getConfig().getInt("herobrine.duration-seconds") * 20;
 
-        // В последний тик — резкий поворот головы
+        // === Последний тик: резкий взгляд + шаг вперёд ===
         Bukkit.getScheduler().runTaskLater(plugin, () -> {
 
             Location t = target.getLocation();
@@ -110,9 +110,20 @@ public class HerobrineNMS {
             float yaw = (float) (Math.toDegrees(Math.atan2(dz, dx)) - 90);
             float pitch = (float) -Math.toDegrees(Math.atan2(dy, Math.sqrt(dx * dx + dz * dz)));
 
+            // Резкий взгляд
             herobrine.setYRot(yaw);
             herobrine.setXRot(pitch);
             herobrine.yHeadRot = yaw;
+
+            // 👣 Микро-шаг вперёд (0.35 блока)
+            Location stepDir = t.clone().subtract(herobrine.getX(), herobrine.getY(), herobrine.getZ())
+                    .toVector().normalize().multiply(0.35).toLocation(target.getWorld());
+
+            herobrine.setPos(
+                    herobrine.getX() + stepDir.getX(),
+                    herobrine.getY(),
+                    herobrine.getZ() + stepDir.getZ()
+            );
 
             // Через 1 тик — исчезновение
             Bukkit.getScheduler().runTaskLater(plugin, () -> {

@@ -37,13 +37,13 @@ public class HerobrineNPCSpawner {
         npc = CitizensAPI.getNPCRegistry().createNPC(EntityType.PLAYER, "");
         npc.spawn(loc);
 
-        // ❌ скрываем ник + HP + TAB (максимально жёстко)
+        // ❌ скрываем ник + HP + TAB
         npc.setName("");
         npc.data().setPersistent("nameplate-visible", false);
         npc.data().setPersistent("tablist", false);
         npc.data().setPersistent("show-health", false);
 
-        // 👁️ LOOK (аналог /npc look)
+        // 👁️ LOOK (как /npc look)
         npc.addTrait(LookClose.class);
         LookClose look = npc.getTrait(LookClose.class);
         look.lookClose(true);
@@ -53,35 +53,40 @@ public class HerobrineNPCSpawner {
         // 🎭 Голова MHF_Herobrine
         equipHerobrineHead();
 
-        // 🌫️ дым + звук при появлении
+        // 🌫️ эффект появления
         loc.getWorld().spawnParticle(Particle.SMOKE_LARGE, loc, 30, 0.3, 0.5, 0.3, 0.01);
         loc.getWorld().playSound(loc, Sound.ENTITY_WITHER_SPAWN, 0.6f, 0.5f);
         loc.getWorld().playSound(loc, Sound.ENTITY_ENDERMAN_STARE, 0.6f, 0.4f);
 
-        // 😵 ЭФФЕКТЫ ИГРОКУ (ТЕПЕРЬ ТОЧНО ЕСТЬ)
-        target.addPotionEffect(new PotionEffect(
-                PotionEffectType.BLINDNESS,
-                60, // 3 секунды
-                1,
-                false,
-                false
-        ));
-
-        target.addPotionEffect(new PotionEffect(
-                PotionEffectType.SLOW,
-                80, // 4 секунды
-                2,
-                false,
-                false
-        ));
+        // 😨 стартовые эффекты игроку
+        applyEffects(target);
 
         // 😨 пугающие сообщения
         sendScaryMessages(plugin, target);
 
-        // ⏳ авто-исчезновение
+        // 🔁 ПОВТОР ЭФФЕКТОВ ПОКА ХЕРОБРИН СУЩЕСТВУЕТ
+        Bukkit.getScheduler().runTaskTimer(plugin, task -> {
+            if (!active) {
+                task.cancel();
+                return;
+            }
+
+            applyEffects(target);
+
+            target.playSound(
+                    target.getLocation(),
+                    Sound.ENTITY_ENDERMAN_STARE,
+                    0.5f,
+                    0.5f
+            );
+
+        }, 80L, 80L); // каждые 4 секунды
+
+        // ⏳ авто-исчезновение через 20 сек
         Bukkit.getScheduler().runTaskLater(plugin, HerobrineNPCSpawner::despawn, 20 * 20L);
     }
 
+    // 🎭 Голова Херобрина
     private static void equipHerobrineHead() {
         if (!npc.isSpawned()) return;
         if (!(npc.getEntity() instanceof org.bukkit.entity.LivingEntity entity)) return;
@@ -94,6 +99,26 @@ public class HerobrineNPCSpawner {
         entity.getEquipment().setHelmet(head);
     }
 
+    // 😵 ЭФФЕКТЫ ИГРОКУ (единый метод)
+    private static void applyEffects(Player target) {
+        target.addPotionEffect(new PotionEffect(
+                PotionEffectType.BLINDNESS,
+                40, // 2 сек
+                1,
+                false,
+                false
+        ));
+
+        target.addPotionEffect(new PotionEffect(
+                PotionEffectType.SLOW,
+                60, // 3 сек
+                1,
+                false,
+                false
+        ));
+    }
+
+    // 😨 СООБЩЕНИЯ
     private static void sendScaryMessages(JavaPlugin plugin, Player p) {
         Bukkit.getScheduler().runTaskLater(plugin, () ->
                 p.sendMessage("§8§oТы чувствуешь чужое присутствие..."), 20L);
@@ -108,6 +133,7 @@ public class HerobrineNPCSpawner {
                 p.playSound(p.getLocation(), Sound.ENTITY_ENDERMAN_STARE, 0.7f, 0.4f), 100L);
     }
 
+    // 💨 ИСЧЕЗНОВЕНИЕ
     public static void despawn() {
         if (npc != null && npc.isSpawned()) {
             Location loc = npc.getEntity().getLocation();

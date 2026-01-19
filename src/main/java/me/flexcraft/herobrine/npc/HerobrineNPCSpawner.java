@@ -1,72 +1,62 @@
 package me.flexcraft.herobrine.npc;
 
-import me.flexcraft.herobrine.HerobrinePlugin;
 import net.citizensnpcs.api.CitizensAPI;
 import net.citizensnpcs.api.npc.NPC;
 import net.citizensnpcs.api.npc.NPCRegistry;
-import net.citizensnpcs.trait.LookClose;
 import org.bukkit.*;
 import org.bukkit.entity.EntityType;
-import org.bukkit.entity.LivingEntity;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.SkullMeta;
-import org.bukkit.potion.PotionEffect;
-import org.bukkit.potion.PotionEffectType;
+import org.bukkit.plugin.Plugin;
 import org.bukkit.scheduler.BukkitRunnable;
+import org.bukkit.util.Vector;
 
 public class HerobrineNPCSpawner {
 
+    private static NPC npc;
     private static boolean active = false;
-    private static NPC currentNPC = null;
 
     public static boolean isActive() {
         return active;
     }
 
-    public static void spawn(HerobrinePlugin plugin, Player target) {
-
-        if (active) return;
+    public static void spawn(Plugin plugin, Player target) {
 
         active = true;
 
         NPCRegistry registry = CitizensAPI.getNPCRegistry();
-        NPC npc = registry.createNPC(EntityType.PLAYER, "");
-        currentNPC = npc;
 
-        Location spawnLoc = target.getLocation().clone();
-        spawnLoc.setY(spawnLoc.getBlockY() + 1.2);
+        npc = registry.createNPC(EntityType.PLAYER, ""); // имя скрыто
+        npc.setProtected(true);
 
-        npc.spawn(spawnLoc);
+        // ───────────── ЛОКАЦИЯ ─────────────
+        Location loc = target.getLocation().clone();
 
-        // --- СКРЫВАЕМ ИМЯ / TAB / HP ---
-        npc.setName("");
-        npc.data().setPersistent("nameplate-visible", false);
-        npc.data().setPersistent("tablist", false);
+        Vector dir = loc.getDirection().normalize();
+        loc.add(dir.multiply(2.5)); // 2.5 блока перед игроком
+        loc.add(0, 1, 0); // +1 вверх (чтобы не проваливался)
 
-        // --- LOOK TRAIT (/npc look) ---
-        LookClose look = npc.getOrAddTrait(LookClose.class);
-        look.lookClose(true);
-        look.setRange(12);
-        look.setRealisticLooking(true);
+        npc.spawn(loc);
 
-        // --- ENTITY ---
-        LivingEntity le = (LivingEntity) npc.getEntity();
-        le.setAI(false);
-        le.setSilent(true);
-        le.setInvulnerable(true);
-        le.setCollidable(false);
+        // ───────────── ВНЕШНИЙ ВИД ─────────────
+        npc.data().setPersistent("nameplate-visible", false); // скрыть ник
+        npc.data().setPersistent("show-health", false);       // скрыть хп
 
-        // --- ГОЛОВА HEROBRINE ---
-        ItemStack head = new ItemStack(Material.PLAYER_HEAD);
-        SkullMeta meta = (SkullMeta) head.getItemMeta();
-        if (meta != null) {
-            meta.setOwner("MHF_Herobrine");
-            head.setItemMeta(meta);
+        // надеть голову Herobrine
+        if (npc.getEntity() instanceof org.bukkit.entity.Player npcPlayer) {
+
+            ItemStack head = new ItemStack(Material.PLAYER_HEAD);
+            SkullMeta meta = (SkullMeta) head.getItemMeta();
+            if (meta != null) {
+                meta.setOwner("MHF_Herobrine");
+                head.setItemMeta(meta);
+            }
+
+            npcPlayer.getEquipment().setHelmet(head);
         }
-        le.getEquipment().setHelmet(head);
 
-        // --- ЭФФЕКТЫ ---
+        // ───────────── ЭФФЕКТЫ И УЖАС ─────────────
         target.addPotionEffect(new PotionEffect(PotionEffectType.BLINDNESS, 60, 1));
         target.addPotionEffect(new PotionEffect(PotionEffectType.SLOW, 60, 4));
         target.addPotionEffect(new PotionEffect(PotionEffectType.CONFUSION, 80, 1));
@@ -74,32 +64,40 @@ public class HerobrineNPCSpawner {
         target.playSound(target.getLocation(), Sound.ENTITY_ENDERMAN_STARE, 1f, 0.4f);
         target.playSound(target.getLocation(), Sound.AMBIENT_CAVE, 1f, 0.5f);
 
-        target.sendMessage("§8Вы чувствуете §fчужой взгляд...");
+        target.getWorld().spawnParticle(
+                Particle.SMOKE_LARGE,
+                loc.clone().add(0, 1.8, 0),
+                30,
+                0.4, 0.6, 0.4,
+                0.01
+        );
 
-        // --- ИСЧЕЗНОВЕНИЕ ---
+        // ───────────── ИСЧЕЗНОВЕНИЕ ─────────────
         new BukkitRunnable() {
             @Override
             public void run() {
 
-                Location loc = le.getLocation();
+                if (npc != null && npc.isSpawned()) {
 
-                loc.getWorld().spawnParticle(
-                        Particle.SMOKE_LARGE,
-                        loc.clone().add(0, 1, 0),
-                        60,
-                        0.4, 0.6, 0.4,
-                        0.03
-                );
+                    Location l = npc.getEntity().getLocation();
 
-                loc.getWorld().playSound(loc, Sound.ENTITY_WITHER_AMBIENT, 1f, 0.2f);
+                    l.getWorld().spawnParticle(
+                            Particle.SMOKE_LARGE,
+                            l.clone().add(0, 1, 0),
+                            80,
+                            0.6, 1, 0.6,
+                            0.02
+                    );
 
-                npc.despawn();
-                npc.destroy();
+                    l.getWorld().playSound(l, Sound.ENTITY_WITHER_AMBIENT, 1f, 0.3f);
 
-                // 🔓 РАЗРЕШАЕМ СНОВА
+                    npc.despawn();
+                    npc.destroy();
+                }
+
+                npc = null;
                 active = false;
-                currentNPC = null;
             }
-        }.runTaskLater(plugin, 60L);
+        }.runTaskLater(plugin, 20L * 6); // 6 секунд
     }
 }

@@ -1,77 +1,77 @@
 package me.flexcraft.herobrine.fake;
 
 import me.flexcraft.herobrine.HerobrinePlugin;
-import org.bukkit.Bukkit;
-import org.bukkit.Location;
-import org.bukkit.Sound;
+import org.bukkit.*;
 import org.bukkit.entity.Player;
 import org.bukkit.entity.Villager;
+import org.bukkit.inventory.EntityEquipment;
+import org.bukkit.inventory.ItemStack;
 import org.bukkit.potion.PotionEffect;
 import org.bukkit.potion.PotionEffectType;
-import org.bukkit.util.Vector;
+import org.bukkit.scheduler.BukkitRunnable;
 
 public class FakeHerobrineSpawner {
 
     public static void spawn(HerobrinePlugin plugin, Player target) {
 
-        // 📍 ПОЯВЛЯЕТСЯ ОЧЕНЬ БЛИЗКО ПЕРЕД ИГРОКОМ
-        Location base = target.getLocation();
-        Vector forward = base.getDirection().normalize().multiply(1.8);
-        Location spawnLoc = base.clone().add(forward);
-        spawnLoc.setY(base.getY());
+        Location spawnLoc = target.getLocation().add(
+                target.getLocation().getDirection().normalize().multiply(1.5)
+        );
 
-        // 👤 ХЕРОБРИН (БЕЗ ИМЕНИ)
-        Villager npc = target.getWorld().spawn(spawnLoc, Villager.class, v -> {
-            v.setAI(false);
-            v.setSilent(true);
-            v.setInvulnerable(true);
-            v.setCollidable(false);
-            v.setCustomNameVisible(false);
-            v.setRemoveWhenFarAway(false);
-        });
+        // ⛔ блокируем поворот — чтобы он был ЛИЦОМ
+        spawnLoc.setYaw(target.getLocation().getYaw() + 180);
+        spawnLoc.setPitch(0);
 
-        // 👁️ СРАЗУ СМОТРИТ В ГЛАЗА
-        lookAt(npc, target);
+        World world = target.getWorld();
 
-        // 🌑 МИР ТЕМНЕЕТ, ОН — НЕТ
-        target.addPotionEffect(new PotionEffect(PotionEffectType.DARKNESS, 100, 0));
-        target.addPotionEffect(new PotionEffect(PotionEffectType.SLOW, 80, 1));
-        target.addPotionEffect(new PotionEffect(PotionEffectType.WEAKNESS, 80, 0));
+        Villager herobrine = world.spawn(spawnLoc, Villager.class);
+        herobrine.setCustomName("§fHerobrine");
+        herobrine.setCustomNameVisible(true);
+        herobrine.setAI(false);
+        herobrine.setSilent(true);
+        herobrine.setInvulnerable(true);
 
-        // 👁️ «БЕЛЫЕ ГЛАЗА» — СВЕТЯЩИЙСЯ СИЛУЭТ
-        npc.addPotionEffect(new PotionEffect(PotionEffectType.GLOWING, 100, 0));
-        npc.addPotionEffect(new PotionEffect(PotionEffectType.NIGHT_VISION, 100, 0));
+        // 🧥 Внешний вид
+        EntityEquipment eq = herobrine.getEquipment();
+        if (eq != null) {
+            eq.setHelmet(new ItemStack(Material.PLAYER_HEAD));
+            eq.setChestplate(new ItemStack(Material.LEATHER_CHESTPLATE));
+            eq.setLeggings(new ItemStack(Material.LEATHER_LEGGINGS));
+            eq.setBoots(new ItemStack(Material.LEATHER_BOOTS));
+        }
 
-        // 🔊 ТИХОЕ ДЫХАНИЕ (ОЧЕНЬ НЕПРИЯТНО В НАУШНИКАХ)
-        target.playSound(target.getLocation(), Sound.ENTITY_PLAYER_BREATH, 1.0f, 0.5f);
+        // 😱 ХОРРОР ЭФФЕКТЫ
+        target.addPotionEffect(new PotionEffect(PotionEffectType.BLINDNESS, 40, 2));
+        target.addPotionEffect(new PotionEffect(PotionEffectType.SLOW, 40, 4));
+        target.addPotionEffect(new PotionEffect(PotionEffectType.DARKNESS, 40, 1));
 
-        // 👁️ МЕДЛЕННЫЙ, НЕЕСТЕСТВЕННЫЙ ВЗГЛЯД
-        Bukkit.getScheduler().runTaskTimer(plugin, task -> {
-            if (!npc.isValid() || !target.isOnline()) {
-                task.cancel();
-                return;
+        world.playSound(
+                target.getLocation(),
+                Sound.AMBIENT_CAVE,
+                1.5f,
+                0.5f
+        );
+
+        // 👁️ "БЕЛЫЕ ГЛАЗА" (имитация вспышкой)
+        target.spawnParticle(
+                Particle.FLASH,
+                target.getEyeLocation(),
+                1
+        );
+
+        // 💀 Исчезновение через 2 секунды
+        new BukkitRunnable() {
+            @Override
+            public void run() {
+                if (!herobrine.isDead()) {
+                    world.spawnParticle(
+                            Particle.SMOKE_LARGE,
+                            herobrine.getLocation().add(0, 1, 0),
+                            20
+                    );
+                    herobrine.remove();
+                }
             }
-            lookAt(npc, target);
-        }, 0L, 6L);
-
-        // ⏳ СМОТРИТ 4 СЕКУНДЫ
-        Bukkit.getScheduler().runTaskLater(plugin, () -> {
-
-            // 🕳️ ПОСЛЕДНИЙ МОМЕНТ
-            target.addPotionEffect(new PotionEffect(PotionEffectType.BLINDNESS, 20, 0));
-            target.playSound(target.getLocation(), Sound.BLOCK_AMETHYST_BLOCK_CHIME, 0.6f, 0.4f);
-
-            if (npc.isValid()) {
-                npc.remove();
-            }
-
-        }, 80L);
-    }
-
-    private static void lookAt(Villager npc, Player target) {
-        Location npcLoc = npc.getLocation();
-        Vector dir = target.getEyeLocation().toVector().subtract(npcLoc.toVector());
-        npcLoc.setDirection(dir);
-        npc.teleport(npcLoc);
+        }.runTaskLater(plugin, 40L);
     }
 }

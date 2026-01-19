@@ -20,9 +20,9 @@ public class FakeHerobrineSpawner {
 
         // 👉 СПАВН ПРЯМО ПЕРЕД ЛИЦОМ
         Location spawnLoc = target.getEyeLocation()
-                .add(target.getLocation().getDirection().normalize().multiply(1.2));
-        spawnLoc.setPitch(0);
+                .add(target.getLocation().getDirection().normalize().multiply(1.4));
         spawnLoc.setYaw(target.getLocation().getYaw() + 180);
+        spawnLoc.setPitch(0);
 
         Villager herobrine = world.spawn(spawnLoc, Villager.class);
         herobrine.setCustomName("§fHerobrine");
@@ -31,11 +31,11 @@ public class FakeHerobrineSpawner {
         herobrine.setSilent(true);
         herobrine.setInvulnerable(true);
 
-        // 👁️ БЕЛЫЕ ГЛАЗА (кастомная голова)
+        // 👁️ БЕЛЫЕ ГЛАЗА
         ItemStack head = new ItemStack(Material.PLAYER_HEAD);
         SkullMeta meta = (SkullMeta) head.getItemMeta();
         if (meta != null) {
-            meta.setOwner("MHF_Herobrine"); // классический Herobrine-скин
+            meta.setOwner("MHF_Herobrine");
             head.setItemMeta(meta);
         }
 
@@ -46,55 +46,68 @@ public class FakeHerobrineSpawner {
 
         // 😱 ЭФФЕКТЫ СТРАХА
         target.addPotionEffect(new PotionEffect(PotionEffectType.BLINDNESS, 40, 1));
-        target.addPotionEffect(new PotionEffect(PotionEffectType.SLOW, 60, 4));
+        target.addPotionEffect(new PotionEffect(PotionEffectType.SLOW, 60, 3));
         target.addPotionEffect(new PotionEffect(PotionEffectType.DARKNESS, 60, 1));
 
-        // 🔊 ЗВУКИ (шёпот + пещера)
+        // 🔊 ЗВУКИ
         world.playSound(target.getLocation(), Sound.AMBIENT_CAVE, 1.5f, 0.4f);
-        world.playSound(target.getLocation(), Sound.ENTITY_ENDERMAN_STARE, 0.8f, 0.5f);
+        world.playSound(target.getLocation(), Sound.ENTITY_ENDERMAN_STARE, 1.0f, 0.5f);
 
-        // ⚡ МИКРО-ВСПЫШКА (имитация белых глаз)
+        // ⚡ ВСПЫШКА (глаза)
         target.spawnParticle(Particle.FLASH, target.getEyeLocation(), 1);
 
-        // 🧟‍♂️ МЕДЛЕННО ИДЁТ К ИГРОКУ
         new BukkitRunnable() {
+
             int ticks = 0;
 
             @Override
             public void run() {
-                if (ticks > 60 || herobrine.isDead()) {
-                    disappear();
+
+                if (!herobrine.isValid()) {
+                    cancel();
                     return;
                 }
 
-                // если игрок отвернулся — ИСЧЕЗАЕТ
-                Vector look = target.getLocation().getDirection();
+                // ⏱ ПЕРВЫЕ 30 ТИКОВ (1.5 сек) — НЕ ИСЧЕЗАЕТ НИ ПРИ КАКИХ УСЛОВИЯХ
+                if (ticks < 30) {
+                    ticks++;
+                    return;
+                }
+
+                // 👁️ ПОСЛЕ — ПРОВЕРКА ВЗГЛЯДА
+                Vector look = target.getLocation().getDirection().normalize();
                 Vector toHerobrine = herobrine.getLocation()
                         .toVector()
                         .subtract(target.getLocation().toVector())
                         .normalize();
 
-                if (look.dot(toHerobrine) < 0.6) {
+                if (look.dot(toHerobrine) < 0.5) {
                     disappear();
                     return;
                 }
 
-                // движение к игроку
+                // 🧟‍♂️ МЕДЛЕННО ПОДХОДИТ
                 Vector move = target.getLocation()
                         .toVector()
                         .subtract(herobrine.getLocation().toVector())
                         .normalize()
-                        .multiply(0.08);
+                        .multiply(0.06);
 
                 herobrine.teleport(herobrine.getLocation().add(move));
+
                 ticks++;
+
+                // ⏳ ЛИМИТ ЖИЗНИ
+                if (ticks > 80) {
+                    disappear();
+                }
             }
 
             void disappear() {
                 world.spawnParticle(
                         Particle.SMOKE_LARGE,
                         herobrine.getLocation().add(0, 1, 0),
-                        25
+                        30
                 );
                 world.playSound(
                         herobrine.getLocation(),
@@ -105,6 +118,7 @@ public class FakeHerobrineSpawner {
                 herobrine.remove();
                 cancel();
             }
+
         }.runTaskTimer(plugin, 0L, 2L);
     }
 }

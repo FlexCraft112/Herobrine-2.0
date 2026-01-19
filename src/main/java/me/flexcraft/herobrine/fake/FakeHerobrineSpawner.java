@@ -14,48 +14,52 @@ public class FakeHerobrineSpawner {
 
     public static void spawn(HerobrinePlugin plugin, Player target) {
 
-        // 📍 ПОЯВЛЯЕТСЯ ПРЯМО ПЕРЕД ИГРОКОМ (БЛИЗКО)
+        // 📍 ПОЯВЛЯЕТСЯ ОЧЕНЬ БЛИЗКО ПЕРЕД ИГРОКОМ
         Location base = target.getLocation();
-        Vector forward = base.getDirection().normalize().multiply(2);
+        Vector forward = base.getDirection().normalize().multiply(1.8);
         Location spawnLoc = base.clone().add(forward);
         spawnLoc.setY(base.getY());
 
-        // 👤 ХЕРОБРИН
+        // 👤 ХЕРОБРИН (БЕЗ ИМЕНИ)
         Villager npc = target.getWorld().spawn(spawnLoc, Villager.class, v -> {
             v.setAI(false);
             v.setSilent(true);
             v.setInvulnerable(true);
             v.setCollidable(false);
-            v.setCustomName("§5Herobrine");
-            v.setCustomNameVisible(true);
+            v.setCustomNameVisible(false);
+            v.setRemoveWhenFarAway(false);
         });
 
-        // 👁️ СРАЗУ СМОТРИТ В ЛИЦО
+        // 👁️ СРАЗУ СМОТРИТ В ГЛАЗА
         lookAt(npc, target);
 
-        // 😨 МЯГКИЙ ХОРРОР (не ослепление)
-        target.addPotionEffect(new PotionEffect(PotionEffectType.DARKNESS, 80, 0));
-        target.addPotionEffect(new PotionEffect(PotionEffectType.SLOW, 60, 1));
-        target.addPotionEffect(new PotionEffect(PotionEffectType.WEAKNESS, 60, 0));
+        // 🌑 МИР ТЕМНЕЕТ, ОН — НЕТ
+        target.addPotionEffect(new PotionEffect(PotionEffectType.DARKNESS, 100, 0));
+        target.addPotionEffect(new PotionEffect(PotionEffectType.SLOW, 80, 1));
+        target.addPotionEffect(new PotionEffect(PotionEffectType.WEAKNESS, 80, 0));
 
-        // 🔊 ТИХИЙ ЗВУК (НЕ СКРИМЕР)
-        target.playSound(target.getLocation(), Sound.ENTITY_PLAYER_BREATH, 1.0f, 0.6f);
+        // 👁️ «БЕЛЫЕ ГЛАЗА» — СВЕТЯЩИЙСЯ СИЛУЭТ
+        npc.addPotionEffect(new PotionEffect(PotionEffectType.GLOWING, 100, 0));
+        npc.addPotionEffect(new PotionEffect(PotionEffectType.NIGHT_VISION, 100, 0));
 
-        // 👁️ МЕДЛЕННО СЛЕДИТ ВЗГЛЯДОМ
+        // 🔊 ТИХОЕ ДЫХАНИЕ (ОЧЕНЬ НЕПРИЯТНО В НАУШНИКАХ)
+        target.playSound(target.getLocation(), Sound.ENTITY_PLAYER_BREATH, 1.0f, 0.5f);
+
+        // 👁️ МЕДЛЕННЫЙ, НЕЕСТЕСТВЕННЫЙ ВЗГЛЯД
         Bukkit.getScheduler().runTaskTimer(plugin, task -> {
             if (!npc.isValid() || !target.isOnline()) {
                 task.cancel();
                 return;
             }
             lookAt(npc, target);
-        }, 0L, 5L);
+        }, 0L, 6L);
 
-        // ⏳ СТОИТ И СМОТРИТ ~4 СЕК
+        // ⏳ СМОТРИТ 4 СЕКУНДЫ
         Bukkit.getScheduler().runTaskLater(plugin, () -> {
 
-            // 🌫️ ПОСЛЕДНИЙ ЭФФЕКТ
+            // 🕳️ ПОСЛЕДНИЙ МОМЕНТ
             target.addPotionEffect(new PotionEffect(PotionEffectType.BLINDNESS, 20, 0));
-            target.playSound(target.getLocation(), Sound.BLOCK_AMETHYST_BLOCK_CHIME, 0.7f, 0.4f);
+            target.playSound(target.getLocation(), Sound.BLOCK_AMETHYST_BLOCK_CHIME, 0.6f, 0.4f);
 
             if (npc.isValid()) {
                 npc.remove();

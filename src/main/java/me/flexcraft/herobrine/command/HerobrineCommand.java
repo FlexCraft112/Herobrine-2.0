@@ -1,6 +1,8 @@
 package me.flexcraft.herobrine.command;
 
 import me.flexcraft.herobrine.HerobrinePlugin;
+import me.flexcraft.herobrine.nms.v1_20_R1.FakePlayerSpawner;
+
 import org.bukkit.Bukkit;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandExecutor;
@@ -50,7 +52,8 @@ public class HerobrineCommand implements CommandExecutor {
         );
         target.sendMessage(msg("target-message"));
 
-        // 🔥 ЗДЕСЬ БУДЕТ NMS ХЕРОБРИН (следующий шаг)
+        // 🔥 SPAWN NMS ХЕРОБРИНА ПЕРЕД ИГРОКОМ
+        FakePlayerSpawner.spawn(target);
 
         return true;
     }

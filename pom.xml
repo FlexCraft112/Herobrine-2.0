@@ -13,6 +13,7 @@
     <properties>
         <java.version>17</java.version>
         <paper.version>1.20.1-R0.1-SNAPSHOT</paper.version>
+        <citizens.version>2.0.32-SNAPSHOT</citizens.version>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     </properties>
 
@@ -29,6 +30,8 @@
     </repositories>
 
     <dependencies>
+
+        <!-- Paper -->
         <dependency>
             <groupId>io.papermc.paper</groupId>
             <artifactId>paper-api</artifactId>
@@ -36,12 +39,14 @@
             <scope>provided</scope>
         </dependency>
 
+        <!-- Citizens (С API ВНУТРИ) -->
         <dependency>
             <groupId>net.citizensnpcs</groupId>
-            <artifactId>citizensapi</artifactId>
-            <version>2.0.33-SNAPSHOT</version>
+            <artifactId>citizens-main</artifactId>
+            <version>${citizens.version}</version>
             <scope>provided</scope>
         </dependency>
+
     </dependencies>
 
     <build>

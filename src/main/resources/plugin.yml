@@ -1,8 +1,10 @@
-name: Herobrine-2.0
-version: 2.0
+name: Herobrine2
+version: 1.0
 main: me.flexcraft.herobrine.HerobrinePlugin
 api-version: 1.20
-author: FlexCraft
+author: Helfy_YT
+
+depend: [Citizens]
 
 commands:
   herobrine:

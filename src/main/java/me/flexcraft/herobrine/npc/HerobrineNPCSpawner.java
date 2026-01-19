@@ -29,7 +29,7 @@ public class HerobrineNPCSpawner {
         active = true;
 
         // =========================
-        // СПЕРЕДИ ИГРОКА
+        // 1️⃣ СПЕРЕДИ — БЕЗ МЕЧА
         // =========================
         Location front = getInFront(target, 2.5, 1);
         spawnNPC(front, false);
@@ -41,29 +41,40 @@ public class HerobrineNPCSpawner {
         sendScaryMessages(plugin, target);
 
         // =========================
-        // ЧЕРЕЗ 4 СЕК — СЗАДИ
+        // 2️⃣ ЧЕРЕЗ 4 СЕК — СЗАДИ С МЕЧОМ
         // =========================
         Bukkit.getScheduler().runTaskLater(plugin, () -> {
             despawnInternal();
 
             Location back = getBehind(target, 1.5, 1);
-            spawnNPC(back, true);
+            spawnNPC(back, true); // ← МЕЧ ТОЛЬКО ЗДЕСЬ
 
             back.getWorld().spawnParticle(Particle.SMOKE_LARGE, back, 50, 0.3, 0.6, 0.3, 0.01);
             back.getWorld().playSound(back, Sound.ENTITY_ENDERMAN_SCREAM, 0.8f, 0.4f);
 
-        }, 80L); // 4 секунды
+            // =========================
+            // 3️⃣ УДАР НА 5-Й СЕКУНДЕ
+            // =========================
+            Bukkit.getScheduler().runTaskLater(plugin,
+                    () -> hitPlayer(target),
+                    100L // 5 секунд после появления сзади
+            );
 
-        // =========================
-        // ИСЧЕЗНОВЕНИЕ ЧЕРЕЗ 7 СЕК
-        // =========================
-        Bukkit.getScheduler().runTaskLater(plugin, HerobrineNPCSpawner::despawn, 220L);
+            // =========================
+            // 4️⃣ ИСЧЕЗНОВЕНИЕ НА 7-Й СЕКУНДЕ
+            // =========================
+            Bukkit.getScheduler().runTaskLater(plugin,
+                    HerobrineNPCSpawner::despawn,
+                    140L
+            );
+
+        }, 80L); // 4 секунды после появления спереди
     }
 
     // =========================
     // SPAWN NPC
     // =========================
-    private static void spawnNPC(Location loc, boolean behind) {
+    private static void spawnNPC(Location loc, boolean withSword) {
         npc = CitizensAPI.getNPCRegistry().createNPC(EntityType.PLAYER, "");
         npc.spawn(loc);
 
@@ -79,25 +90,42 @@ public class HerobrineNPCSpawner {
         look.setRandomLook(false);
 
         if (npc.getEntity() instanceof LivingEntity entity) {
-            equipHerobrine(entity);
+            equipHerobrine(entity, withSword);
         }
     }
 
     // =========================
     // СНАРЯЖЕНИЕ
     // =========================
-    private static void equipHerobrine(LivingEntity entity) {
+    private static void equipHerobrine(LivingEntity entity, boolean withSword) {
         // Голова
         ItemStack head = new ItemStack(Material.PLAYER_HEAD);
         SkullMeta meta = (SkullMeta) head.getItemMeta();
         meta.setOwningPlayer(Bukkit.getOfflinePlayer("MHF_Herobrine"));
         head.setItemMeta(meta);
 
-        // Меч
-        ItemStack sword = new ItemStack(Material.NETHERITE_SWORD);
-
         entity.getEquipment().setHelmet(head);
-        entity.getEquipment().setItemInMainHand(sword);
+
+        // Меч — ТОЛЬКО если нужно
+        if (withSword) {
+            ItemStack sword = new ItemStack(Material.NETHERITE_SWORD);
+            entity.getEquipment().setItemInMainHand(sword);
+        } else {
+            entity.getEquipment().setItemInMainHand(null);
+        }
+    }
+
+    // =========================
+    // УДАР
+    // =========================
+    private static void hitPlayer(Player p) {
+        if (!p.isOnline() || !active) return;
+
+        p.damage(3.0); // 1.5 сердца
+        p.playSound(p.getLocation(), Sound.ENTITY_PLAYER_HURT, 1f, 0.6f);
+        p.playSound(p.getLocation(), Sound.ENTITY_ENDERMAN_TELEPORT, 1f, 0.5f);
+
+        p.sendMessage("§4§oОн был прямо за тобой...");
     }
 
     // =========================

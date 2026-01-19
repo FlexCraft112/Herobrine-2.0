@@ -3,7 +3,7 @@ package me.flexcraft.herobrine.npc;
 import me.flexcraft.herobrine.HerobrinePlugin;
 import net.citizensnpcs.api.CitizensAPI;
 import net.citizensnpcs.api.npc.NPC;
-import net.citizensnpcs.api.trait.trait.LookClose;
+import net.citizensnpcs.api.npc.NPCRegistry;
 import org.bukkit.*;
 import org.bukkit.entity.EntityType;
 import org.bukkit.entity.Player;
@@ -15,85 +15,74 @@ public class HerobrineNPCSpawner {
 
     public static void spawn(HerobrinePlugin plugin, Player target) {
 
-        // 📍 Появляется ПРЯМО ПЕРЕД ЛИЦОМ
+        NPCRegistry registry = CitizensAPI.getNPCRegistry();
+
         Location spawnLoc = target.getLocation()
                 .add(target.getLocation().getDirection().normalize().multiply(2));
-        spawnLoc.add(0, 1, 0);
+        spawnLoc.setY(target.getLocation().getY());
 
-        // 🧍 NPC
-        NPC npc = CitizensAPI.getNPCRegistry().createNPC(
-                EntityType.PLAYER,
-                ChatColor.DARK_GRAY + "Herobrine"
-        );
+        NPC npc = registry.createNPC(EntityType.PLAYER, "§7Herobrine");
 
-        // 👁️ Белые глаза (рабочий UUID)
-        npc.data().setPersistent("player-skin-uuid",
-                "069a79f4-44e9-4726-a5be-fca90e38aaf5");
+        npc.data().setPersistent("player-skin-name", "Herobrine");
         npc.data().setPersistent("player-skin-use-latest", true);
-
-        // 🧠 СМОТРИТ В ГЛАЗА
-        LookClose look = npc.getOrAddTrait(LookClose.class);
-        look.lookClose(true);
-        look.setRange(64);
-
-        // ☠️ Бессмертен
-        npc.setProtected(true);
-        npc.data().setPersistent(NPC.DEFAULT_PROTECTED_METADATA, true);
+        npc.data().setPersistent("protected", true);
 
         npc.spawn(spawnLoc);
 
-        // 😈 ХОРРОР ПРИ ПОЯВЛЕНИИ
-        target.playSound(target.getLocation(), Sound.ENTITY_ENDERMAN_STARE, 1f, 0.3f);
-        target.playSound(target.getLocation(), Sound.AMBIENT_CAVE, 1f, 0.4f);
-
+        // 🔊 ХОРРОР ЭФФЕКТЫ
         target.addPotionEffect(new PotionEffect(PotionEffectType.BLINDNESS, 60, 1));
         target.addPotionEffect(new PotionEffect(PotionEffectType.SLOW, 60, 4));
         target.addPotionEffect(new PotionEffect(PotionEffectType.CONFUSION, 80, 1));
 
+        target.playSound(target.getLocation(), Sound.ENTITY_ENDERMAN_STARE, 1f, 0.4f);
+        target.playSound(target.getLocation(), Sound.AMBIENT_CAVE, 1f, 0.5f);
+
         target.getWorld().spawnParticle(
                 Particle.SMOKE_LARGE,
                 spawnLoc.clone().add(0, 1.8, 0),
-                40,
+                30,
                 0.3, 0.4, 0.3,
                 0.01
         );
 
-        // ⏳ ИСЧЕЗНОВЕНИЕ ЧЕРЕЗ 3 СЕКУНДЫ
+        // 👁️ ВСЕГДА СМОТРИТ В ГЛАЗА
         new BukkitRunnable() {
+            int ticks = 0;
+
             @Override
             public void run() {
+                if (!npc.isSpawned() || !target.isOnline()) {
+                    cancel();
+                    return;
+                }
 
-                if (!npc.isSpawned()) return;
+                Location npcLoc = npc.getEntity().getLocation();
+                Location eye = target.getEyeLocation();
 
-                Location loc = npc.getEntity().getLocation();
+                npcLoc.setDirection(eye.toVector().subtract(npcLoc.toVector()));
+                npc.getEntity().teleport(npcLoc);
 
-                // 🌑 АДСКИЙ ДЫМ
-                loc.getWorld().spawnParticle(
-                        Particle.CAMPFIRE_COSY_SMOKE,
-                        loc.clone().add(0, 1, 0),
-                        120,
-                        0.6, 1.0, 0.6,
-                        0.01
-                );
+                ticks++;
 
-                loc.getWorld().spawnParticle(
-                        Particle.SMOKE_LARGE,
-                        loc.clone().add(0, 1.5, 0),
-                        80,
-                        0.4, 0.6, 0.4,
-                        0.01
-                );
+                // 💨 ИСЧЕЗНОВЕНИЕ С ДЫМОМ
+                if (ticks >= 60) {
+                    Location loc = npc.getEntity().getLocation();
 
-                // ⚡ ТРЕСК И ПУСТОТА
-                loc.getWorld().playSound(loc, Sound.ENTITY_WITHER_SPAWN, 0.6f, 0.3f);
-                loc.getWorld().playSound(loc, Sound.ENTITY_ENDERMAN_TELEPORT, 1f, 0.2f);
+                    loc.getWorld().spawnParticle(
+                            Particle.CAMPFIRE_COSY_SMOKE,
+                            loc.add(0, 1.2, 0),
+                            80,
+                            0.4, 0.6, 0.4,
+                            0.02
+                    );
 
-                // 🕳️ ДОП. СЛЕПОТА ПОСЛЕ ИСЧЕЗНОВЕНИЯ
-                target.addPotionEffect(new PotionEffect(PotionEffectType.DARKNESS, 40, 0));
+                    loc.getWorld().playSound(loc, Sound.ENTITY_WITHER_SPAWN, 0.6f, 0.3f);
 
-                npc.despawn();
-                npc.destroy();
+                    npc.despawn();
+                    npc.destroy();
+                    cancel();
+                }
             }
-        }.runTaskLater(plugin, 60L); // 3 секунды
+        }.runTaskTimer(plugin, 1L, 1L);
     }
 }

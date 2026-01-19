@@ -2,7 +2,7 @@ package me.flexcraft.herobrine.npc;
 
 import net.citizensnpcs.api.CitizensAPI;
 import net.citizensnpcs.api.npc.NPC;
-import net.citizensnpcs.api.trait.trait.LookClose;
+import net.citizensnpcs.trait.LookClose;
 import org.bukkit.*;
 import org.bukkit.entity.EntityType;
 import org.bukkit.entity.Player;
@@ -24,7 +24,7 @@ public class HerobrineNPCSpawner {
         if (active) return;
         active = true;
 
-        // 📍 СПАВН: 2.5 блока ПЕРЕД игроком + на 1 блок выше
+        // ➡️ 2.5 блока ПЕРЕД игроком + 1 блок вверх
         Location loc = target.getLocation().clone();
         Vector dir = loc.getDirection().normalize().multiply(2.5);
         loc.add(dir);
@@ -35,35 +35,34 @@ public class HerobrineNPCSpawner {
         npc = CitizensAPI.getNPCRegistry().createNPC(EntityType.PLAYER, "");
         npc.spawn(loc);
 
-        // ❌ СКРЫВАЕМ ИМЯ И HP (TAB тоже)
+        // ❌ скрываем ник + HP + TAB
         npc.setName("");
         npc.data().setPersistent("nameplate-visible", false);
         npc.data().setPersistent("tablist", false);
 
-        // 👁️ LOOK — СМОТРИТ СПОКОЙНО, НЕ ДЁРГАЕТСЯ
+        // 👁️ LOOK (как /npc look)
         npc.addTrait(LookClose.class);
         LookClose look = npc.getTrait(LookClose.class);
         look.lookClose(true);
         look.setRange(6);
         look.setRandomLook(false);
 
-        // 🎭 ГОЛОВА ХЕРОБРИНА (MHF_Herobrine)
+        // 🎭 Голова MHF_Herobrine
         equipHerobrineHead();
 
-        // 🌫️ ТЁМНЫЙ ДЫМ ПРИ ПОЯВЛЕНИИ
+        // 🌫️ дым + звук
         loc.getWorld().spawnParticle(Particle.SMOKE_LARGE, loc, 30, 0.3, 0.5, 0.3, 0.01);
         loc.getWorld().playSound(loc, Sound.ENTITY_WITHER_SPAWN, 0.6f, 0.5f);
 
-        // 😨 ПУГАЮЩИЕ СООБЩЕНИЯ
+        // 😨 пугающие сообщения
         sendScaryMessages(plugin, target);
 
-        // ⏳ АВТО-ИСЧЕЗНОВЕНИЕ ЧЕРЕЗ 20 СЕК
+        // ⏳ авто-исчезновение
         Bukkit.getScheduler().runTaskLater(plugin, HerobrineNPCSpawner::despawn, 20 * 20L);
     }
 
     private static void equipHerobrineHead() {
         if (!npc.isSpawned()) return;
-
         if (!(npc.getEntity() instanceof org.bukkit.entity.LivingEntity entity)) return;
 
         ItemStack head = new ItemStack(Material.PLAYER_HEAD);
@@ -75,7 +74,6 @@ public class HerobrineNPCSpawner {
     }
 
     private static void sendScaryMessages(JavaPlugin plugin, Player p) {
-
         Bukkit.getScheduler().runTaskLater(plugin, () ->
                 p.sendMessage("§8§oТы чувствуешь чужое присутствие..."), 20L);
 
@@ -92,14 +90,11 @@ public class HerobrineNPCSpawner {
     public static void despawn() {
         if (npc != null && npc.isSpawned()) {
             Location loc = npc.getEntity().getLocation();
-
             loc.getWorld().spawnParticle(Particle.SMOKE_LARGE, loc, 40, 0.4, 0.6, 0.4, 0.01);
             loc.getWorld().playSound(loc, Sound.ENTITY_WITHER_DEATH, 0.6f, 0.6f);
-
             npc.despawn();
             npc.destroy();
         }
-
         npc = null;
         active = false;
     }

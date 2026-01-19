@@ -47,17 +47,17 @@ public class HerobrineNPCSpawner {
             despawnInternal();
 
             Location back = getBehind(target, 1.5, 1);
-            spawnNPC(back, true); // ← МЕЧ ТОЛЬКО ЗДЕСЬ
+            spawnNPC(back, true);
 
             back.getWorld().spawnParticle(Particle.SMOKE_LARGE, back, 50, 0.3, 0.6, 0.3, 0.01);
             back.getWorld().playSound(back, Sound.ENTITY_ENDERMAN_SCREAM, 0.8f, 0.4f);
 
             // =========================
-            // 3️⃣ УДАР НА 5-Й СЕКУНДЕ
+            // 3️⃣ УДАР НА 3-Й СЕКУНДЕ
             // =========================
             Bukkit.getScheduler().runTaskLater(plugin,
                     () -> hitPlayer(target),
-                    100L // 5 секунд после появления сзади
+                    60L // ⬅️ БЫЛО 100L
             );
 
             // =========================
@@ -68,7 +68,7 @@ public class HerobrineNPCSpawner {
                     140L
             );
 
-        }, 80L); // 4 секунды после появления спереди
+        }, 80L);
     }
 
     // =========================
@@ -98,7 +98,6 @@ public class HerobrineNPCSpawner {
     // СНАРЯЖЕНИЕ
     // =========================
     private static void equipHerobrine(LivingEntity entity, boolean withSword) {
-        // Голова
         ItemStack head = new ItemStack(Material.PLAYER_HEAD);
         SkullMeta meta = (SkullMeta) head.getItemMeta();
         meta.setOwningPlayer(Bukkit.getOfflinePlayer("MHF_Herobrine"));
@@ -106,7 +105,6 @@ public class HerobrineNPCSpawner {
 
         entity.getEquipment().setHelmet(head);
 
-        // Меч — ТОЛЬКО если нужно
         if (withSword) {
             ItemStack sword = new ItemStack(Material.NETHERITE_SWORD);
             entity.getEquipment().setItemInMainHand(sword);
@@ -116,10 +114,14 @@ public class HerobrineNPCSpawner {
     }
 
     // =========================
-    // УДАР
+    // УДАР С ЗАМАХОМ
     // =========================
     private static void hitPlayer(Player p) {
         if (!p.isOnline() || !active) return;
+
+        if (npc != null && npc.getEntity() instanceof LivingEntity entity) {
+            entity.swingMainHand(); // 👈 ВИДИМЫЙ ЗАМАХ
+        }
 
         p.damage(3.0); // 1.5 сердца
         p.playSound(p.getLocation(), Sound.ENTITY_PLAYER_HURT, 1f, 0.6f);
@@ -137,7 +139,6 @@ public class HerobrineNPCSpawner {
 
             p.addPotionEffect(new PotionEffect(
                     PotionEffectType.BLINDNESS, 40, 1, false, false));
-
             p.addPotionEffect(new PotionEffect(
                     PotionEffectType.SLOW, 40, 2, false, false));
 
@@ -149,13 +150,13 @@ public class HerobrineNPCSpawner {
     // =========================
     private static void sendScaryMessages(JavaPlugin plugin, Player p) {
         Bukkit.getScheduler().runTaskLater(plugin, () ->
-                p.sendMessage("§8§oТы слышишь дыхание..."), 20L);
+                p.sendMessage("§8§oТы чувствуешь чужое присутствие..."), 20L);
 
         Bukkit.getScheduler().runTaskLater(plugin, () ->
-                p.sendMessage("§7§oОн ближе, чем кажется."), 60L);
+                p.sendMessage("§7§oКто-то стоит слишком близко."), 60L);
 
         Bukkit.getScheduler().runTaskLater(plugin, () ->
-                p.sendMessage("§4§lПОЗДНО"), 100L);
+                p.sendMessage("§4§lНЕ ОБОРАЧИВАЙСЯ"), 100L);
     }
 
     // =========================

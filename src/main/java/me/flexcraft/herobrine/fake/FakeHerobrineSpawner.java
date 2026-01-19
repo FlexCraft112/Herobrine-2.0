@@ -1,56 +1,57 @@
 package me.flexcraft.herobrine.fake;
 
+import com.comphenix.protocol.ProtocolLibrary;
+import com.comphenix.protocol.ProtocolManager;
+import me.flexcraft.herobrine.HerobrinePlugin;
+import org.bukkit.Bukkit;
 import org.bukkit.Location;
-import org.bukkit.World;
+import org.bukkit.Sound;
 import org.bukkit.entity.Player;
 import org.bukkit.entity.Villager;
-import org.bukkit.scheduler.BukkitRunnable;
+import org.bukkit.util.Vector;
 
 public class FakeHerobrineSpawner {
 
-    public static void spawn(Player target) {
-        World world = target.getWorld();
+    public static void spawn(HerobrinePlugin plugin, Player target) {
 
-        // 📍 Спавн ПРЯМО ПЕРЕД ИГРОКОМ
-        Location loc = target.getLocation().clone()
-                .add(target.getLocation().getDirection().normalize().multiply(3));
+        // 📍 СПАВН ПЕРЕД ИГРОКОМ
+        Location spawnLoc = target.getLocation().clone();
+        Vector dir = spawnLoc.getDirection().normalize();
+        spawnLoc.add(dir.multiply(3));
+        spawnLoc.setY(spawnLoc.getY());
 
-        // 👁️ Создаём "Херобрина"
-        Villager herobrine = world.spawn(loc, Villager.class, v -> {
-            v.setCustomName("§fHerobrine");
-            v.setCustomNameVisible(true);
+        // 👤 ВРЕМЕННЫЙ "ХЕРОБРИН"
+        Villager npc = target.getWorld().spawn(spawnLoc, Villager.class, v -> {
             v.setAI(false);
-            v.setInvulnerable(true);
             v.setSilent(true);
+            v.setInvulnerable(true);
             v.setCollidable(false);
+            v.setCustomName("§5Herobrine");
+            v.setCustomNameVisible(true);
         });
 
-        // 😈 ПОВОРОТ ГОЛОВЫ К ИГРОКУ
-        new BukkitRunnable() {
-            int ticks = 0;
-
-            @Override
-            public void run() {
-                if (!herobrine.isValid() || !target.isOnline()) {
-                    herobrine.remove();
-                    cancel();
-                    return;
-                }
-
-                herobrine.teleport(herobrine.getLocation().setDirection(
-                        target.getLocation().toVector()
-                                .subtract(herobrine.getLocation().toVector())
-                ));
-
-                ticks++;
-                if (ticks >= 60) { // ~3 секунды
-                    herobrine.remove();
-                    cancel();
-                }
+        // 👁️ ПОСТОЯННО СМОТРИТ НА ИГРОКА
+        Bukkit.getScheduler().runTaskTimer(plugin, task -> {
+            if (!npc.isValid() || !target.isOnline()) {
+                task.cancel();
+                return;
             }
-        }.runTaskTimer(
-                org.bukkit.plugin.java.JavaPlugin.getProvidingPlugin(FakeHerobrineSpawner.class),
-                0L, 1L
-        );
+
+            Location npcLoc = npc.getLocation();
+            Location playerLoc = target.getLocation();
+
+            Vector look = playerLoc.toVector().subtract(npcLoc.toVector());
+            npcLoc.setDirection(look);
+            npc.teleport(npcLoc);
+
+        }, 0L, 2L);
+
+        // 💀 ИСЧЕЗАЕТ ЧЕРЕЗ 3 СЕКУНДЫ
+        Bukkit.getScheduler().runTaskLater(plugin, () -> {
+            if (npc.isValid()) {
+                npc.remove();
+                target.playSound(target.getLocation(), Sound.ENTITY_WITHER_SPAWN, 0.7f, 0.4f);
+            }
+        }, 60L);
     }
 }

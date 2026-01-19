@@ -26,84 +26,86 @@ public class HerobrineNPCSpawner {
         if (active) return;
         active = true;
 
-        // ➡️ позиция: 2.5 блока впереди + 1 вверх
-        Location loc = target.getLocation().clone();
-        Vector dir = loc.getDirection().normalize().multiply(2.5);
-        loc.add(dir).add(0, 1, 0);
-        loc.setYaw(target.getLocation().getYaw());
-        loc.setPitch(0);
+        // ===== СПАВН СПЕРЕДИ =====
+        Location front = getInFront(target, 2.5, 1);
+        spawnNPC(front, false);
 
+        // ЭФФЕКТЫ
+        applyBackgroundDarkness(target);
+        applyPanicEffects(target);
+
+        front.getWorld().spawnParticle(Particle.SMOKE_LARGE, front, 30, 0.4, 0.6, 0.4, 0.01);
+        front.getWorld().playSound(front, Sound.ENTITY_WITHER_SPAWN, 0.6f, 0.5f);
+
+        sendScaryMessages(plugin, target);
+
+        // ===== ИСЧЕЗНУТЬ + ПОЯВИТЬСЯ СЗАДИ =====
+        Bukkit.getScheduler().runTaskLater(plugin, () -> {
+            despawnInternal();
+
+            Location back = getBehind(target, 2.5, 1);
+            spawnNPC(back, true);
+
+            back.getWorld().spawnParticle(Particle.SMOKE_LARGE, back, 40, 0.4, 0.6, 0.4, 0.01);
+            back.getWorld().playSound(back, Sound.ENTITY_ENDERMAN_SCREAM, 0.7f, 0.4f);
+
+        }, 80L); // ~4 секунды
+
+        // ===== ФИНАЛЬНОЕ ИСЧЕЗНОВЕНИЕ =====
+        Bukkit.getScheduler().runTaskLater(plugin, HerobrineNPCSpawner::despawn, 20 * 20L);
+    }
+
+    // ===================== NPC =====================
+
+    private static void spawnNPC(Location loc, boolean withSword) {
         npc = CitizensAPI.getNPCRegistry().createNPC(EntityType.PLAYER, "");
         npc.spawn(loc);
 
-        // ❌ скрываем всё визуальное
         npc.setName("");
         npc.data().setPersistent("nameplate-visible", false);
         npc.data().setPersistent("tablist", false);
         npc.data().setPersistent("show-health", false);
 
-        // 👁️ LOOK
         npc.addTrait(LookClose.class);
         LookClose look = npc.getTrait(LookClose.class);
         look.lookClose(true);
         look.setRange(6);
         look.setRandomLook(false);
 
-        // 🎭 Голова Херобрина
         equipHerobrineHead();
-
-        // 🌫️ появление
-        loc.getWorld().spawnParticle(Particle.SMOKE_LARGE, loc, 30, 0.4, 0.6, 0.4, 0.01);
-        loc.getWorld().playSound(loc, Sound.ENTITY_WITHER_SPAWN, 0.6f, 0.5f);
-
-        // 🕶️ ПОСТОЯННАЯ ТЬМА (ФОН, НЕ ПРОПАДАЕТ)
-        applyBackgroundDarkness(target);
-
-        // 😨 стартовая паника
-        applyPanicEffects(target);
-
-        // 💀 волны страха
-        Bukkit.getScheduler().runTaskTimer(plugin, task -> {
-            if (!active) {
-                task.cancel();
-                return;
-            }
-
-            applyPanicEffects(target);
-
-            target.getWorld().spawnParticle(
-                    Particle.SMOKE_NORMAL,
-                    target.getLocation().add(0, 1.2, 0),
-                    12, 0.3, 0.4, 0.3, 0.01
-            );
-
-            target.playSound(
-                    target.getLocation(),
-                    Sound.ENTITY_ENDERMAN_STARE,
-                    0.5f,
-                    0.4f
-            );
-
-        }, 60L, 80L); // каждые ~4 секунды
-
-        sendScaryMessages(plugin, target);
-
-        // ⏳ исчезновение
-        Bukkit.getScheduler().runTaskLater(plugin, HerobrineNPCSpawner::despawn, 20 * 20L);
+        if (withSword) equipSword();
     }
 
-    // 🌑 ФОН: тьма без "чистого обзора"
+    private static void equipHerobrineHead() {
+        if (!(npc.getEntity() instanceof org.bukkit.entity.LivingEntity entity)) return;
+
+        ItemStack head = new ItemStack(Material.PLAYER_HEAD);
+        SkullMeta meta = (SkullMeta) head.getItemMeta();
+        meta.setOwningPlayer(Bukkit.getOfflinePlayer("MHF_Herobrine"));
+        head.setItemMeta(meta);
+
+        entity.getEquipment().setHelmet(head);
+    }
+
+    private static void equipSword() {
+        if (!(npc.getEntity() instanceof org.bukkit.entity.LivingEntity entity)) return;
+
+        ItemStack sword = new ItemStack(Material.NETHERITE_SWORD);
+        entity.getEquipment().setItemInMainHand(sword);
+    }
+
+    // ===================== ЭФФЕКТЫ =====================
+
     private static void applyBackgroundDarkness(Player p) {
         p.addPotionEffect(new PotionEffect(
                 PotionEffectType.DARKNESS,
-                20 * 30, // 30 секунд
+                20 * 30,
                 0,
                 false,
                 false
         ));
     }
 
-    // 😵 ПАНИКА
     private static void applyPanicEffects(Player p) {
         p.addPotionEffect(new PotionEffect(
                 PotionEffectType.BLINDNESS,
@@ -122,38 +124,51 @@ public class HerobrineNPCSpawner {
         ));
     }
 
-    private static void equipHerobrineHead() {
-        if (!npc.isSpawned()) return;
-        if (!(npc.getEntity() instanceof org.bukkit.entity.LivingEntity entity)) return;
-
-        ItemStack head = new ItemStack(Material.PLAYER_HEAD);
-        SkullMeta meta = (SkullMeta) head.getItemMeta();
-        meta.setOwningPlayer(Bukkit.getOfflinePlayer("MHF_Herobrine"));
-        head.setItemMeta(meta);
-
-        entity.getEquipment().setHelmet(head);
-    }
+    // ===================== СООБЩЕНИЯ =====================
 
     private static void sendScaryMessages(JavaPlugin plugin, Player p) {
         Bukkit.getScheduler().runTaskLater(plugin, () ->
-                p.sendMessage("§8§oТы не должен был его увидеть..."), 40L);
+                p.sendMessage("§8§oТы слышишь дыхание..."), 40L);
 
         Bukkit.getScheduler().runTaskLater(plugin, () ->
-                p.sendMessage("§7§oОн всё ещё здесь."), 80L);
+                p.sendMessage("§7§oОн ближе, чем кажется."), 80L);
 
         Bukkit.getScheduler().runTaskLater(plugin, () ->
-                p.sendMessage("§4§lНЕ СМОТРИ"), 120L);
+                p.sendMessage("§4§lПОЗДНО"), 120L);
     }
 
-    public static void despawn() {
+    // ===================== ПОЗИЦИИ =====================
+
+    private static Location getInFront(Player p, double dist, double y) {
+        Location loc = p.getLocation().clone();
+        Vector dir = loc.getDirection().normalize().multiply(dist);
+        loc.add(dir).add(0, y, 0);
+        loc.setYaw(p.getLocation().getYaw());
+        loc.setPitch(0);
+        return loc;
+    }
+
+    private static Location getBehind(Player p, double dist, double y) {
+        Location loc = p.getLocation().clone();
+        Vector dir = loc.getDirection().normalize().multiply(-dist);
+        loc.add(dir).add(0, y, 0);
+        loc.setYaw(p.getLocation().getYaw() + 180);
+        loc.setPitch(0);
+        return loc;
+    }
+
+    // ===================== УДАЛЕНИЕ =====================
+
+    private static void despawnInternal() {
         if (npc != null && npc.isSpawned()) {
-            Location loc = npc.getEntity().getLocation();
-            loc.getWorld().spawnParticle(Particle.SMOKE_LARGE, loc, 50, 0.5, 0.7, 0.5, 0.01);
-            loc.getWorld().playSound(loc, Sound.ENTITY_WITHER_DEATH, 0.6f, 0.6f);
             npc.despawn();
             npc.destroy();
         }
         npc = null;
+    }
+
+    public static void despawn() {
+        despawnInternal();
         active = false;
     }
 }

@@ -2,8 +2,8 @@ package me.flexcraft.herobrine.command;
 
 import me.flexcraft.herobrine.HerobrinePlugin;
 import me.flexcraft.herobrine.fake.FakeHerobrineSpawner;
+
 import org.bukkit.Bukkit;
-import org.bukkit.Sound;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandExecutor;
 import org.bukkit.command.CommandSender;
@@ -46,24 +46,18 @@ public class HerobrineCommand implements CommandExecutor {
             return true;
         }
 
-        sender.sendMessage(
-                msg("admin-trigger").replace("{player}", target.getName())
-        );
+        sender.sendMessage(msg("admin-trigger").replace("{player}", target.getName()));
         target.sendMessage(msg("target-message"));
 
-        // 👁️ СПАВН ХЕРОБРИНА
-        FakeHerobrineSpawner.spawn(plugin, target);
+        // 👻 ХОРРОР-ЭФФЕКТЫ
+        target.addPotionEffect(new PotionEffect(PotionEffectType.DARKNESS, 60, 0));
+        target.addPotionEffect(new PotionEffect(PotionEffectType.BLINDNESS, 40, 1));
+        target.addPotionEffect(new PotionEffect(PotionEffectType.CONFUSION, 100, 0));
+        target.addPotionEffect(new PotionEffect(PotionEffectType.SLOW, 60, 2));
+        target.addPotionEffect(new PotionEffect(PotionEffectType.WEAKNESS, 80, 1));
 
-        // 😨 ХОРРОР-ЭФФЕКТЫ
-        target.addPotionEffect(new PotionEffect(PotionEffectType.BLINDNESS, 60, 1));
-        target.addPotionEffect(new PotionEffect(PotionEffectType.SLOW, 100, 2));
-        target.addPotionEffect(new PotionEffect(PotionEffectType.CONFUSION, 120, 1));
-        target.addPotionEffect(new PotionEffect(PotionEffectType.DARKNESS, 80, 0));
-        target.addPotionEffect(new PotionEffect(PotionEffectType.SILENCE, 100, 0));
-
-        // 🔊 ЖУТКИЕ ЗВУКИ
-        target.playSound(target.getLocation(), Sound.AMBIENT_CAVE, 1.5f, 0.6f);
-        target.playSound(target.getLocation(), Sound.ENTITY_ENDERMAN_STARE, 1.0f, 0.5f);
+        // 🔥 СПАВН ХЕРОБРИНА ПРЯМО ПЕРЕД ИГРОКОМ
+        FakeHerobrineSpawner.spawn(target);
 
         return true;
     }

@@ -16,12 +16,20 @@
         <java.version>17</java.version>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <paper.version>1.20.1-R0.1-SNAPSHOT</paper.version>
+        <citizens.version>2.0.33-SNAPSHOT</citizens.version>
     </properties>
 
     <repositories>
+        <!-- Paper / Purpur -->
         <repository>
             <id>papermc</id>
             <url>https://repo.papermc.io/repository/maven-public/</url>
+        </repository>
+
+        <!-- Citizens -->
+        <repository>
+            <id>citizens-repo</id>
+            <url>https://repo.citizensnpcs.co/</url>
         </repository>
     </repositories>
 
@@ -35,10 +43,19 @@
             <scope>provided</scope>
         </dependency>
 
+        <!-- Citizens API -->
+        <dependency>
+            <groupId>net.citizensnpcs</groupId>
+            <artifactId>citizens-main</artifactId>
+            <version>${citizens.version}</version>
+            <scope>provided</scope>
+        </dependency>
+
     </dependencies>
 
     <build>
         <plugins>
+
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-compiler-plugin</artifactId>
@@ -49,6 +66,7 @@
                     <encoding>UTF-8</encoding>
                 </configuration>
             </plugin>
+
         </plugins>
     </build>
 

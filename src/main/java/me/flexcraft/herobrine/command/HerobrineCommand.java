@@ -18,7 +18,7 @@ public class HerobrineCommand implements CommandExecutor {
     public boolean onCommand(CommandSender sender, Command command, String label, String[] args) {
 
         if (!sender.hasPermission("herobrine.use")) {
-            sender.sendMessage("§cНет прав.");
+            sender.sendMessage("§cНет прав");
             return true;
         }
 
@@ -29,11 +29,11 @@ public class HerobrineCommand implements CommandExecutor {
 
         Player target = Bukkit.getPlayerExact(args[0]);
         if (target == null) {
-            sender.sendMessage("§cИгрок не найден.");
+            sender.sendMessage("§cИгрок не найден");
             return true;
         }
 
-        sender.sendMessage("§7Вы призвали §cХеробрина §7для §f" + target.getName());
+        sender.sendMessage("§7Вы призвали §fHerobrine §7для §c" + target.getName());
         target.sendMessage("§8Вы чувствуете §fчужой взгляд...");
 
         HerobrineNPCSpawner.spawn(plugin, target);

@@ -1,9 +1,10 @@
 package me.flexcraft.herobrine.command;
 
 import me.flexcraft.herobrine.HerobrinePlugin;
-import me.flexcraft.herobrine.nms.v1_20_R1.FakePlayerSpawner;
+import me.flexcraft.herobrine.fake.FakeHerobrineSpawner;
 
 import org.bukkit.Bukkit;
+import org.bukkit.Location;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandExecutor;
 import org.bukkit.command.CommandSender;
@@ -52,8 +53,11 @@ public class HerobrineCommand implements CommandExecutor {
         );
         target.sendMessage(msg("target-message"));
 
-        // 🔥 SPAWN NMS ХЕРОБРИНА ПЕРЕД ИГРОКОМ
-        FakePlayerSpawner.spawn(target);
+        // 🔥 ВЫЧИСЛЯЕМ ТОЧКУ ПЕРЕД ИГРОКОМ
+        Location spawnLocation = FakeHerobrineSpawner.getLocationInFront(target, 3.0);
+
+        // ⚡ ВРЕМЕННЫЙ ЭФФЕКТ (ТЕСТ)
+        target.getWorld().strikeLightningEffect(spawnLocation);
 
         return true;
     }

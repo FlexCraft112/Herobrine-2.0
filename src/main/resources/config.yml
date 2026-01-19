@@ -12,17 +12,25 @@ messages:
   target-message: "§8Вы чувствуете чужой взгляд..."
 
 herobrine:
-  duration-seconds: 4        # сколько секунд он стоит
-  spawn-distance: 2.5        # дистанция перед игроком
+  # ===== Основное поведение =====
+  duration-seconds: 4        # сколько секунд Херобрин находится перед игроком
+  spawn-distance: 2.5        # дистанция спавна перед игроком
+
+  # ===== Звук появления =====
   play-sound: true
   sound: "minecraft:ambient.cave"
   sound-volume: 1.0
   sound-pitch: 0.5
 
+  # ===== Эффекты =====
   effects:
     darkness: true
     darkness-duration: 60    # тики (20 = 1 сек)
 
-  damage:
-    enabled: false
-    amount: 1.0
+  # ===== УДАР-ПРИЗРАК (Ghost Hit) =====
+  ghost-hit:
+    enabled: true            # включить удар-призрак
+    damage: 1.0              # 0.0 = без урона (только эффект)
+    knockback: 0.35          # сила отбрасывания
+    confusion: true          # эффект дезориентации
+    confusion-duration: 40   # тики

@@ -6,6 +6,8 @@ import net.citizensnpcs.api.npc.NPC;
 import org.bukkit.*;
 import org.bukkit.entity.EntityType;
 import org.bukkit.entity.Player;
+import org.bukkit.inventory.ItemStack;
+import org.bukkit.inventory.meta.SkullMeta;
 import org.bukkit.potion.PotionEffect;
 import org.bukkit.potion.PotionEffectType;
 import org.bukkit.scheduler.BukkitRunnable;
@@ -18,22 +20,31 @@ public class HerobrineNPCSpawner {
                 .add(target.getLocation().getDirection().normalize().multiply(2));
         spawnLoc.setY(target.getLocation().getY());
 
-        // ВНУТРЕННЕЕ ИМЯ NPC
         NPC npc = CitizensAPI.getNPCRegistry()
                 .createNPC(EntityType.PLAYER, "BalloonLion9289");
 
         npc.spawn(spawnLoc);
         npc.setProtected(true);
 
-        // ❌ ПОЛНОСТЬЮ УБИРАЕМ НИК
+        // ❌ УБИРАЕМ НИК И HP
         npc.setName("");
         npc.data().setPersistent("nameplate-visible", false);
+        npc.data().setPersistent("show-health", false);
+        npc.data().setPersistent("health", 20.0);
 
-        // СКИН = СТИВ (БЕЗ ГОЛОВЫ, БЕЗ КОСТЫЛЕЙ)
+        // 🧍 СКИН = STEVE
         npc.data().setPersistent("player-skin-name", "Steve");
         npc.data().setPersistent("player-skin-use-latest", true);
 
-        // ===== ЭФФЕКТЫ УЖАСА =====
+        // 👁️ ГОЛОВА ХЕРОБРИНА
+        ItemStack head = new ItemStack(Material.PLAYER_HEAD);
+        SkullMeta meta = (SkullMeta) head.getItemMeta();
+        meta.setOwner("Herobrine");
+        head.setItemMeta(meta);
+
+        npc.getEntity().getEquipment().setHelmet(head);
+
+        // 😱 ЭФФЕКТЫ УЖАСА
         target.addPotionEffect(new PotionEffect(PotionEffectType.BLINDNESS, 60, 1));
         target.addPotionEffect(new PotionEffect(PotionEffectType.DARKNESS, 80, 1));
         target.addPotionEffect(new PotionEffect(PotionEffectType.SLOW, 60, 3));
@@ -41,7 +52,7 @@ public class HerobrineNPCSpawner {
         target.playSound(target.getLocation(), Sound.ENTITY_ENDERMAN_STARE, 1f, 0.4f);
         target.playSound(target.getLocation(), Sound.AMBIENT_CAVE, 1f, 0.5f);
 
-        // ===== СМОТРИТ ЧЁТКО В ГЛАЗА (БЕЗ ЗАДИРАНИЯ ВВЕРХ) =====
+        // 👀 СМОТРИТ В ГЛАЗА (БЕЗ ВЗГЛЯДА ВВЕРХ)
         new BukkitRunnable() {
             @Override
             public void run() {
@@ -51,13 +62,12 @@ public class HerobrineNPCSpawner {
                 }
 
                 Location eye = target.getEyeLocation().clone();
-                eye.setPitch(0); // 🔥 КЛЮЧ: убираем взгляд вверх
-
+                eye.setPitch(0);
                 npc.faceLocation(eye);
             }
         }.runTaskTimer(plugin, 0L, 1L);
 
-        // ===== ЭФФЕКТНОЕ ИСЧЕЗНОВЕНИЕ =====
+        // 💨 ЭПИЧЕСКОЕ ИСЧЕЗНОВЕНИЕ
         new BukkitRunnable() {
             @Override
             public void run() {
@@ -66,8 +76,8 @@ public class HerobrineNPCSpawner {
                 loc.getWorld().spawnParticle(
                         Particle.SMOKE_LARGE,
                         loc.add(0, 1, 0),
-                        60,
-                        0.4, 0.8, 0.4,
+                        80,
+                        0.4, 1.0, 0.4,
                         0.02
                 );
 
@@ -76,6 +86,6 @@ public class HerobrineNPCSpawner {
                 npc.despawn();
                 npc.destroy();
             }
-        }.runTaskLater(plugin, 80L); // 4 секунды
+        }.runTaskLater(plugin, 80L);
     }
 }

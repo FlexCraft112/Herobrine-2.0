@@ -4,7 +4,6 @@ import me.flexcraft.herobrine.HerobrinePlugin;
 import me.flexcraft.herobrine.fake.FakeHerobrineSpawner;
 
 import org.bukkit.Bukkit;
-import org.bukkit.Location;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandExecutor;
 import org.bukkit.command.CommandSender;
@@ -53,11 +52,8 @@ public class HerobrineCommand implements CommandExecutor {
         );
         target.sendMessage(msg("target-message"));
 
-        // 🔥 ВЫЧИСЛЯЕМ ТОЧКУ ПЕРЕД ИГРОКОМ
-        Location spawnLocation = FakeHerobrineSpawner.getLocationInFront(target, 3.0);
-
-        // ⚡ ВРЕМЕННЫЙ ЭФФЕКТ (ТЕСТ)
-        target.getWorld().strikeLightningEffect(spawnLocation);
+        // 😈 SPAWN ХЕРОБРИНА ПЕРЕД ИГРОКОМ
+        FakeHerobrineSpawner.spawn(target);
 
         return true;
     }
